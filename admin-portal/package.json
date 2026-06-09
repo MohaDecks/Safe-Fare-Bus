@@ -1,0 +1,9 @@
+{
+  "name": "safefare-admin-portal",
+  "private": true,
+  "description": "Static staff portal — served by backend at /admin/",
+  "scripts": {
+    "dev": "npm run dev --prefix ../backend",
+    "start": "npm run start --prefix ../backend"
+  }
+}
