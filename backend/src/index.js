@@ -1,8 +1,9 @@
 require("dotenv").config();
 const path = require("path");
 const express = require("express");
-const cors = require("cors");
 const { connectDb } = require("./config/db");
+const { corsMiddleware } = require("./lib/cors");
+const { buildApiCatalog, renderApiDocsHtml } = require("./lib/apiCatalog");
 
 const adminPortalPath = path.join(__dirname, "../../admin-portal");
 
@@ -28,8 +29,10 @@ const { migrateLegacyRolePermissions } = require("./lib/migrateRolePermissions")
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const HOST = process.env.HOST || "0.0.0.0";
+const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
 
-app.use(cors());
+app.use(corsMiddleware());
 app.use(express.json({ limit: "2mb" }));
 app.use("/uploads", express.static(pathUploads, { redirect: false }));
 
@@ -38,7 +41,31 @@ app.get("/", (_req, res) => {
 });
 
 app.get("/api", (_req, res) => {
-  res.json({ status: "ok", service: "SafeFare API" });
+  const catalog = buildApiCatalog(PUBLIC_URL);
+  res.json({
+    status: catalog.status,
+    service: catalog.service,
+    version: catalog.version,
+    base_url: catalog.base_url,
+    docs: catalog.docs,
+    routes: catalog.routes_json,
+    staff_portal: catalog.staff_portal,
+    total_endpoints: catalog.total_endpoints,
+    groups: catalog.groups.map((g) => ({
+      name: g.name,
+      prefix: g.prefix || null,
+      count: g.routes.length,
+    })),
+  });
+});
+
+app.get("/api/routes", (_req, res) => {
+  res.json(buildApiCatalog(PUBLIC_URL));
+});
+
+app.get("/api/docs", (_req, res) => {
+  const catalog = buildApiCatalog(PUBLIC_URL);
+  res.type("html").send(renderApiDocsHtml(catalog));
 });
 
 app.use("/api/auth", authRoutes);
@@ -72,13 +99,16 @@ async function main() {
   } catch (err) {
     console.warn("  migrateLegacyRolePermissions:", err.message);
   }
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log("");
     console.log("  SafeFare is running");
     console.log("  -------------------");
-    console.log(`  Staff portal:  http://localhost:${PORT}/admin/`);
-    console.log(`  API:           http://localhost:${PORT}/api`);
-    console.log(`  Home:          http://localhost:${PORT}/`);
+    console.log(`  Listening:     ${HOST}:${PORT}`);
+    console.log(`  Staff portal:  ${PUBLIC_URL}/admin/`);
+    console.log(`  API:           ${PUBLIC_URL}/api`);
+    console.log(`  API docs:      ${PUBLIC_URL}/api/docs`);
+    console.log(`  All routes:    ${PUBLIC_URL}/api/routes`);
+    console.log(`  Home:          ${PUBLIC_URL}/`);
     console.log("");
   });
   server.on("error", (err) => {

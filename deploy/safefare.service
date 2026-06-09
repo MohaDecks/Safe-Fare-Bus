@@ -1,0 +1,16 @@
+[Unit]
+Description=SafeFare Bus API + Staff Portal
+After=network.target mongod.service
+Wants=mongod.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/safefare/backend
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

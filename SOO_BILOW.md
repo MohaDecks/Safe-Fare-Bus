@@ -55,3 +55,18 @@ Passenger waa in admin uu **Staff** ka abuuro (role mobile).
 
 - **Portal (web):** admin, cashier, employer  
 - **App (Flutter):** passenger kaliya  
+
+## Server deploy (2.58.82.168)
+
+Haddii aad rabto inaad server-kaaga ku orodiso:
+
+```bash
+ssh root@2.58.82.168
+git clone https://github.com/MohaDecks/Safe-Fare-Bus.git /opt/safefare
+cd /opt/safefare
+sudo bash deploy/setup-server.sh
+```
+
+Kadib fur browser: **http://2.58.82.168:4000/admin/**
+
+Faahfaahin: `SERVER_DEPLOY.md`
