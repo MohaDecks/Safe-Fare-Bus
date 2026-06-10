@@ -1,8 +1,12 @@
+const path = require("path");
+
+const APP_DIR = process.env.APP_DIR || "/var/www/html/Safe-Fare-Bus";
+
 module.exports = {
   apps: [
     {
       name: "safefare",
-      cwd: "/var/www/html/Safe-Fare-Bus/backend",
+      cwd: path.join(APP_DIR, "backend"),
       script: "src/index.js",
       instances: 1,
       autorestart: true,
