@@ -25,6 +25,7 @@ const adminReportsRoutes = require("./routes/admin/reports");
 const adminCorporatesRoutes = require("./routes/admin/corporates");
 const pathUploads = path.join(__dirname, "../uploads");
 const { ensureMenus } = require("./lib/ensureMenus");
+const { ensureCompany } = require("./lib/ensureCompany");
 const { migrateLegacyRolePermissions } = require("./lib/migrateRolePermissions");
 
 const app = express();
@@ -93,6 +94,7 @@ app.use("/admin", express.static(adminPortalPath, { redirect: false }));
 
 async function main() {
   await connectDb();
+  await ensureCompany();
   await ensureMenus();
   try {
     await migrateLegacyRolePermissions();

@@ -3,9 +3,16 @@
 set -e
 cd "$(dirname "$0")/mobile"
 
-SERVER_IP="${SERVER_IP:-2.58.82.168}"
+DOMAIN="${DOMAIN:-dirshay.com}"
 PORT="${PORT:-4000}"
-API_BASE="http://${SERVER_IP}:${PORT}"
+# Set USE_PORT=false after nginx proxies dirshay.com → :4000
+USE_PORT="${USE_PORT:-true}"
+
+if [ "$USE_PORT" = "true" ]; then
+  API_BASE="http://${DOMAIN}:${PORT}"
+else
+  API_BASE="http://${DOMAIN}"
+fi
 
 echo "Building mobile app → API: $API_BASE"
 flutter pub get

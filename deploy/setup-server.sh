@@ -5,6 +5,7 @@ set -e
 APP_DIR="${APP_DIR:-/opt/safefare}"
 REPO_URL="${REPO_URL:-https://github.com/MohaDecks/Safe-Fare-Bus.git}"
 SERVER_IP="${SERVER_IP:-2.58.82.168}"
+DOMAIN="${DOMAIN:-dirshay.com}"
 PORT="${PORT:-4000}"
 
 echo "==> SafeFare server setup"
@@ -50,11 +51,12 @@ if [ ! -f .env ]; then
   cat > .env <<EOF
 PORT=$PORT
 HOST=0.0.0.0
-PUBLIC_URL=http://$SERVER_IP:$PORT
-CORS_ORIGINS=http://$SERVER_IP:$PORT
+PUBLIC_URL=http://$DOMAIN:$PORT
+CORS_ORIGINS=http://$DOMAIN:$PORT,http://$DOMAIN,https://$DOMAIN,http://www.$DOMAIN
 CORS_ALLOW_ALL=false
 MONGODB_URI=mongodb://127.0.0.1:27017/safefare
 JWT_SECRET=$JWT_SECRET
+DEFAULT_COMPANY_NAME=My Bus Company
 EOF
   echo "==> Created backend/.env"
 else
