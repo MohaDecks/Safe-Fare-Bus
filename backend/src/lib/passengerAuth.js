@@ -22,6 +22,11 @@ function generateOtp() {
   return String(crypto.randomInt(100000, 999999));
 }
 
+/** Until SMS provider is connected, show OTP in the mobile app */
+function shouldShowOtpInApp() {
+  return process.env.SMS_ENABLED !== "true";
+}
+
 async function findPassengerByPhone(digits, companyId) {
   return User.findOne({ phone: digits, role: "passenger", company_id: companyId });
 }
@@ -65,6 +70,11 @@ async function sendPassengerOtp({ phone }) {
     user_id: existing?._id || null,
   });
 
+  // TODO: when SMS_ENABLED=true, send `code` via SMS provider here
+  if (process.env.SMS_ENABLED === "true") {
+    // await sendSms(digits, code);
+  }
+
   return {
     ok: true,
     phone: digits,
@@ -72,7 +82,8 @@ async function sendPassengerOtp({ phone }) {
     expires_in_seconds: Math.floor(OTP_TTL_MS / 1000),
     exists: !!existing,
     is_new: !existing,
-    otp_debug: process.env.NODE_ENV === "production" ? undefined : code,
+    sms_sent: process.env.SMS_ENABLED === "true",
+    ...(shouldShowOtpInApp() ? { otp_in_app: code } : {}),
   };
 }
 

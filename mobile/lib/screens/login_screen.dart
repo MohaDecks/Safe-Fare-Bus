@@ -57,7 +57,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await widget.api.sendPassengerOtp(phone);
       setState(() {
         _otpSent = true;
-        _debugOtp = res['otp_debug'] as String?;
+        _debugOtp = res['otp_in_app'] as String? ?? res['otp_debug'] as String?;
+        if (_debugOtp != null) _otp.text = _debugOtp!;
         _phoneExists = res['exists'] as bool? ?? _phoneExists;
       });
     } on ApiException catch (e) {
@@ -251,15 +252,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         onSubmitted: (_) => _loading ? null : _verifyOtp(),
                       ),
                       if (_debugOtp != null) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Material(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(8),
+                          color: const Color(0xFFEDE9FE),
+                          borderRadius: BorderRadius.circular(12),
                           child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Text(
-                              'Test OTP: $_debugOtp',
-                              style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Your OTP code',
+                                  style: TextStyle(fontSize: 13, color: Color(0xFF5B21B6)),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _debugOtp!,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 8,
+                                    color: Color(0xFF5B21B6),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'SMS not connected yet — use this code above.\nIt is filled in automatically.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 12, color: Color(0xFF6D28D9), height: 1.4),
+                                ),
+                              ],
                             ),
                           ),
                         ),

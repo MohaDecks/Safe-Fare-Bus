@@ -57,6 +57,7 @@ CORS_ALLOW_ALL=false
 MONGODB_URI=mongodb://127.0.0.1:27017/safefare
 JWT_SECRET=$JWT_SECRET
 DEFAULT_COMPANY_NAME=My Bus Company
+SMS_ENABLED=false
 EOF
   echo "==> Created backend/.env"
 else
