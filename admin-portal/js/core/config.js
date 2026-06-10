@@ -1,6 +1,11 @@
 export const API = `${window.location.origin}/api`;
 export const TOKEN_KEY = "sf_token";
 
+/** Default branding when admin has not uploaded a company logo */
+export const DEFAULT_LOGO = "assets/safefare-logo.png";
+export const DEFAULT_BRAND_NAME = "Safe Fare";
+export const DEFAULT_TAGLINE = "Smart Bus Fare & Ticketing Platform";
+
 export const CASHIER_NAV = [
   { id: "qr", icon: "📱", label: "QR Collect fare" },
   { id: "dashboard", icon: "📊", label: "Dashboard" },

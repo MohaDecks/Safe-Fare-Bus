@@ -28,6 +28,25 @@ body {
   line-height: 1.5;
 }
 
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
+}
+
+.boot-splash img,
+.boot-splash-logo {
+  width: min(340px, 88vw);
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.3));
+}
+
 #app {
   min-height: 100vh;
 }
@@ -36,22 +55,39 @@ body {
 .auth-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .auth-brand {
   background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
   color: #fff;
-  padding: 48px;
+  padding: 36px 32px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
+  overflow: auto;
+  position: relative;
+  z-index: 0;
 }
 
-.auth-brand h1 {
-  font-size: 2.5rem;
-  font-weight: 800;
-  margin-bottom: 12px;
+.auth-brand-logo {
+  display: block;
+  width: 100%;
+  max-width: min(100%, 340px);
+  height: auto;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.auth-brand-tagline {
+  opacity: 0.9;
+  max-width: 400px;
+  font-size: 1.05rem;
 }
 
 .auth-brand p {
@@ -61,7 +97,7 @@ body {
 }
 
 .auth-features {
-  margin-top: 40px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -91,11 +127,77 @@ body {
   justify-content: center;
   padding: 32px;
   background: var(--card);
+  min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-card {
   width: 100%;
   max-width: 420px;
+}
+
+.auth-card-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.auth-card-subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin-bottom: 28px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+}
+
+.auth-card-footer {
+  margin-top: 20px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  font-size: 0.88rem;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.auth-retry-banner {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.auth-retry-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 4px;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.auth-retry-link:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .auth-tabs {
@@ -231,14 +333,18 @@ body {
 }
 
 .sidebar-brand {
-  padding: 24px 20px;
+  padding: 16px 12px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.sidebar-brand h2 {
-  color: #fff;
-  font-size: 1.25rem;
-  font-weight: 800;
+.sidebar-brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center top;
+  border-radius: 8px;
+  margin-bottom: 8px;
 }
 
 .sidebar-brand span {
@@ -603,6 +709,48 @@ td {
   justify-content: center;
   margin-top: 10px;
   flex-wrap: wrap;
+}
+
+.company-branding-panel {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.company-branding-preview {
+  width: 240px;
+  padding: 8px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 100%);
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.company-branding-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.company-branding-fallback {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.company-branding-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.company-branding-upload {
+  cursor: pointer;
 }
 
 .perm-matrix-wrap {
@@ -1047,6 +1195,9 @@ code {
   }
   .auth-brand {
     display: none;
+  }
+  .auth-panel {
+    min-height: 100vh;
   }
   .sidebar {
     width: 72px;

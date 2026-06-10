@@ -1,21 +1,28 @@
 import { state, $app } from "../core/state.js";
-import { api } from "../core/api.js";
-import { setToken } from "../core/auth.js";
+import { api, isAuthError } from "../core/api.js";
+import { clearToken } from "../core/auth.js";
+import { clearLastView } from "../core/viewState.js";
 import { roleLabel } from "../utils/format.js";
 import { can, getAdminNav, staffNav } from "../utils/permissions.js";
-import { isReportView, reloadView, showAuth } from "./navigation.js";
+import { isReportView, reloadView, showAuth, setActiveView } from "./navigation.js";
 import { renderAdminSidebar } from "../components/sidebar.js";
 import { renderAdminView } from "../pages/admin/index.js";
 import { renderCashierView } from "../pages/cashier/index.js";
+import { sidebarBrandHtml, hideBootSplash } from "../core/brand.js";
+import { DEFAULT_BRAND_NAME } from "../core/config.js";
 
 export function renderApp() {
+  hideBootSplash();
   const user = state.user;
   const nav = user.role === "admin" ? getAdminNav() : staffNav(user);
+  const brandHtml = state.companyBrand
+    ? sidebarBrandHtml(state.companyBrand)
+    : sidebarBrandHtml({ name: DEFAULT_BRAND_NAME, logo_url: "" });
 
   $app.innerHTML = `
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar-brand"><h2>SafeFare</h2><span>Staff portal</span></div>
+        <div class="sidebar-brand" id="sidebar-brand">${brandHtml}</div>
         <div class="sidebar-user">
           <strong>${user.name}</strong>
           <small>${user.role === "admin" ? user.admin_role_label || roleLabel(user.role) : roleLabel(user.role)}</small>
@@ -49,7 +56,7 @@ export function renderApp() {
       btn.className = `nav-item ${state.view === item.id ? "active" : ""}`;
       btn.innerHTML = `<span class="nav-icon">${item.icon}</span><span>${item.label}</span>`;
       btn.onclick = () => {
-        state.view = item.id;
+        setActiveView(item.id);
         renderApp();
       };
       navEl.appendChild(btn);
@@ -57,9 +64,21 @@ export function renderApp() {
   }
 
   document.getElementById("logout-btn").onclick = () => {
-    setToken(null);
+    clearLastView();
+    clearToken();
+    state.companyBrand = null;
     showAuth();
   };
+
+  if (!state.companyBrand) {
+    api("GET", "/admin/company", null, { silent: true })
+      .then((company) => {
+        state.companyBrand = company;
+        const brandEl = document.getElementById("sidebar-brand");
+        if (brandEl) brandEl.innerHTML = sidebarBrandHtml(company);
+      })
+      .catch(() => {});
+  }
 
   loadView();
 }
@@ -80,8 +99,8 @@ export async function loadView() {
       content.innerHTML = `<div class="card"><div class="card-body"><p>Welcome, ${user.name}</p></div></div>`;
     }
   } catch (err) {
-    if (String(err.message).includes("401") || String(err.message).toLowerCase().includes("token")) {
-      setToken(null);
+    if (isAuthError(err)) {
+      clearToken();
       showAuth();
       return;
     }

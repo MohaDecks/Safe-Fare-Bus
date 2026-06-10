@@ -69,6 +69,19 @@ app.get("/api/docs", (_req, res) => {
   res.type("html").send(renderApiDocsHtml(catalog));
 });
 
+app.get("/api/branding", async (_req, res) => {
+  const Company = require("./models/Company");
+  const { logoUrl } = require("./lib/companyLogo");
+  const company = await Company.findOne().sort({ createdAt: 1 });
+  if (!company) {
+    return res.json({ name: "SafeFare", logo_url: "" });
+  }
+  res.json({
+    name: company.name || "SafeFare",
+    logo_url: logoUrl(company.logo_path || "", _req),
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/roles", adminRolesRoutes);

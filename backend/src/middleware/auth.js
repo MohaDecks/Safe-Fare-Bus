@@ -1,11 +1,12 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-function signToken(user) {
+function signToken(user, opts = {}) {
+  const remember = opts.remember !== false;
   return jwt.sign(
     { sub: user._id.toString(), role: user.role },
     process.env.JWT_SECRET || "dev-secret",
-    { expiresIn: "14d" }
+    { expiresIn: remember ? "30d" : "12h" }
   );
 }
 

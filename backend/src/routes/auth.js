@@ -85,10 +85,27 @@ router.post("/login", async (req, res) => {
     const roleDef = await findRoleForUser(user);
     publicUser.portal_home = resolvePortalHome(roleDef, user.role);
   }
+  const remember = req.body?.remember !== false;
   return res.json({
-    access_token: signToken(user),
+    access_token: signToken(user, { remember }),
     user: publicUser,
   });
+});
+
+router.post("/refresh", requireAuth, async (req, res) => {
+  if (req.user.role === "admin" && req.user.active === false) {
+    return res.status(403).json({ detail: "Admin account is disabled" });
+  }
+  if (req.user.role === "corporate") {
+    return res.status(403).json({ detail: "Use the mobile app for this account" });
+  }
+  if (req.user.role !== "admin") {
+    if (!(await userHasPortalAccess(req.user))) {
+      return res.status(403).json({ detail: "This role cannot sign in to the staff portal" });
+    }
+  }
+  const remember = req.body?.remember !== false;
+  return res.json({ access_token: signToken(req.user, { remember }) });
 });
 
 /** Passenger app — phone + OTP (self register / login) */

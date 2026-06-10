@@ -1,4 +1,5 @@
 import { state } from "../core/state.js";
+import { saveLastView } from "../core/viewState.js";
 
 let _renderApp = null;
 let _loadView = null;
@@ -8,6 +9,14 @@ export function initNavigation({ renderApp, loadView, renderAuth }) {
   _renderApp = renderApp;
   _loadView = loadView;
   _renderAuth = renderAuth;
+}
+
+export function setActiveView(viewId, opts = {}) {
+  state.view = viewId;
+  if (opts.reportsExpanded !== undefined) state.reportsExpanded = opts.reportsExpanded;
+  else if (viewId.startsWith("report:")) state.reportsExpanded = true;
+  else if (opts.reportsExpanded === false) state.reportsExpanded = false;
+  saveLastView(viewId, state.reportsExpanded);
 }
 
 export function refreshApp() {
@@ -28,14 +37,12 @@ export function reportIdFromView(view) {
 }
 
 export function goReport(reportId) {
-  state.view = `report:${reportId}`;
-  state.reportsExpanded = true;
+  setActiveView(`report:${reportId}`, { reportsExpanded: true });
   _renderApp?.();
 }
 
 export function goToView(viewId) {
-  state.view = viewId;
-  state.reportsExpanded = false;
+  setActiveView(viewId, { reportsExpanded: false });
   _renderApp?.();
 }
 

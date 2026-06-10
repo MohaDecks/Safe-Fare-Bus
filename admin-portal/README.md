@@ -60,6 +60,21 @@ admin-portal/
 - `shell/navigation.js` registers `renderApp`, `loadView`, and `renderAuth` callbacks in `main.js` to avoid circular dependencies between shell and pages.
 - Chart.js remains a global `<script>` (UMD); dashboard charts use `window.Chart`.
 
+## Server update (after git push)
+
+On the server:
+
+```bash
+cd /var/www/html/Safe-Fare-Bus
+./deploy/update-server.sh
+```
+
+From MacBook (push + SSH update in one command):
+
+```bash
+./deploy/push-and-update.sh
+```
+
 ## Adding a new admin page
 
 1. Create `js/pages/admin/yourpage.js` exporting `renderYourpage(content)`.

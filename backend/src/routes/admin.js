@@ -142,10 +142,57 @@ router.get("/dashboard/charts", requirePermission("dashboard.view"), async (req,
 
 router.get("/company", requirePermission("dashboard.view"), async (req, res) => {
   const Company = require("../models/Company");
+  const { logoUrl } = require("../lib/companyLogo");
   const company = await Company.findById(req.user.company_id);
   res.json({
     id: company?._id?.toString(),
     name: company?.name || "",
+    logo_url: logoUrl(company?.logo_path || "", req),
+  });
+});
+
+router.patch("/company/logo", requirePermission("dashboard.view"), async (req, res) => {
+  const Company = require("../models/Company");
+  const { saveCompanyLogo, deleteCompanyLogo, logoUrl } = require("../lib/companyLogo");
+  const { logo_base64 } = req.body || {};
+  if (!logo_base64) return res.status(400).json({ detail: "logo_base64 required" });
+
+  const company = await Company.findById(req.user.company_id);
+  if (!company) return res.status(404).json({ detail: "Company not found" });
+
+  let next;
+  try {
+    next = saveCompanyLogo(logo_base64, company._id);
+  } catch (e) {
+    return res.status(400).json({ detail: e.message || "Invalid logo image" });
+  }
+  if (!next) return res.status(400).json({ detail: "Invalid logo image" });
+
+  deleteCompanyLogo(company.logo_path);
+  company.logo_path = next;
+  await company.save();
+
+  res.json({
+    id: company._id.toString(),
+    name: company.name,
+    logo_url: logoUrl(company.logo_path, req),
+  });
+});
+
+router.delete("/company/logo", requirePermission("dashboard.view"), async (req, res) => {
+  const Company = require("../models/Company");
+  const { deleteCompanyLogo } = require("../lib/companyLogo");
+  const company = await Company.findById(req.user.company_id);
+  if (!company) return res.status(404).json({ detail: "Company not found" });
+
+  deleteCompanyLogo(company.logo_path);
+  company.logo_path = "";
+  await company.save();
+
+  res.json({
+    id: company._id.toString(),
+    name: company.name,
+    logo_url: "",
   });
 });
 

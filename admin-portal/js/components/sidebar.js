@@ -1,7 +1,7 @@
 import { REPORT_NAV_FALLBACK, REPORT_NAV_ORDER } from "../core/config.js";
 import { state } from "../core/state.js";
 import { can } from "../utils/permissions.js";
-import { goReport, isReportView, reportIdFromView } from "../shell/navigation.js";
+import { goReport, isReportView, reportIdFromView, setActiveView } from "../shell/navigation.js";
 
 export function renderAdminSidebar(navEl, nav, renderApp) {
   navEl.innerHTML = "";
@@ -66,8 +66,7 @@ export function renderAdminSidebar(navEl, nav, renderApp) {
     btn.className = `nav-item${state.view === item.id ? " active" : ""}`;
     btn.innerHTML = `<span class="nav-icon">${item.icon}</span><span>${item.label}</span>`;
     btn.onclick = () => {
-      state.view = item.id;
-      state.reportsExpanded = false;
+      setActiveView(item.id, { reportsExpanded: false });
       renderAppFn();
     };
     return btn;

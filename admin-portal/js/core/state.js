@@ -1,3 +1,3 @@
 export const $app = document.getElementById("app");
 
-export const state = { user: null, view: "dashboard" };
+export const state = { user: null, view: "dashboard", companyBrand: null };
