@@ -195,6 +195,42 @@ export function showPaymentProviderModal(existing, reload) {
   );
 }
 
+export function showAppServiceModal(existing, reload) {
+  const isEdit = !!existing?.id;
+  openModal(
+    isEdit ? `Edit — ${existing.name}` : "Add app service",
+    `<div class="form-group"><label>Service name</label><input id="m-name" value="${existing?.name || ""}" placeholder="APS / Airport Parking" /></div>
+     <div class="form-group"><label>Link URL</label><input id="m-link" value="${existing?.link_url || ""}" placeholder="http://parking.dirshay.com:8082/login" />
+     <small style="color:var(--muted)">Full URL — opens in browser when user taps icon in app</small></div>
+     <div class="form-group"><label>Icon image</label><input id="m-icon" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+     <small style="color:var(--muted)">PNG or JPG, max ~600KB${isEdit ? " — leave empty to keep current" : ""}</small></div>
+     <div class="form-group"><label>Sort order</label><input id="m-order" type="number" value="${existing?.sort_order ?? 0}" /></div>
+     <div class="form-group"><label><input type="checkbox" id="m-active" ${existing?.active !== false ? "checked" : ""}/> Show on mobile login</label></div>`,
+    async () => {
+      const name = document.getElementById("m-name").value.trim();
+      const link_url = document.getElementById("m-link").value.trim();
+      if (!name) throw new Error("Name required");
+      if (!link_url) throw new Error("Link URL required");
+      const body = {
+        name,
+        link_url,
+        active: document.getElementById("m-active").checked,
+        sort_order: parseInt(document.getElementById("m-order").value, 10) || 0,
+      };
+      const file = document.getElementById("m-icon").files?.[0];
+      if (file) body.icon_base64 = await readFileAsDataUrl(file);
+      else if (!isEdit) throw new Error("Upload an icon image");
+
+      if (isEdit) {
+        await api("PATCH", `/admin/app-services/${existing.id}`, body);
+      } else {
+        await api("POST", "/admin/app-services", body);
+      }
+      reload();
+    }
+  );
+}
+
 export function showAdminRoleModal(existing, reload) {
   const isEdit = !!existing;
   openModal(

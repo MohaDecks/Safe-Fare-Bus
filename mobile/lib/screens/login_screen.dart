@@ -1,4 +1,9 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/api_config.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../utils/phone_input.dart';
@@ -35,8 +40,67 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   bool? _phoneExists;
   bool _otpSent = false;
-  String? _debugOtp;
   String? _phoneDisplay;
+  String? _generatedOtp;
+  final _otpFocus = FocusNode();
+  List<Map<String, dynamic>> _appServices = [];
+  bool _loadingServices = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _otp.addListener(_onOtpChanged);
+    _otpFocus.addListener(_onOtpChanged);
+    _loadAppServices();
+  }
+
+  Future<void> _loadAppServices() async {
+    try {
+      final list = await widget.api.getList('/mobile/app-services', auth: false);
+      if (!mounted) return;
+      setState(() {
+        _appServices = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _loadingServices = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingServices = false);
+    }
+  }
+
+  String _serviceIconUrl(Map<String, dynamic> s) {
+    final url = s['icon_url']?.toString() ?? '';
+    if (url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.baseUrl}$url';
+  }
+
+  Future<void> _openServiceLink(Map<String, dynamic> service) async {
+    final raw = service['link_url']?.toString() ?? '';
+    if (raw.isEmpty) return;
+    final uri = Uri.parse(raw.startsWith('http') ? raw : 'http://$raw');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Ma furi karo link-ga. Hubi internet.');
+    }
+  }
+
+  @override
+  void dispose() {
+    _otp.removeListener(_onOtpChanged);
+    _otpFocus.removeListener(_onOtpChanged);
+    _otpFocus.dispose();
+    _phone.dispose();
+    _otp.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  void _onOtpChanged() {
+    if (mounted) setState(() {});
+  }
 
   Future<void> _checkPhoneAndSendOtp() async {
     final phoneErr = PhoneInput.validate(_phone.text);
@@ -48,7 +112,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _debugOtp = null;
+      _otp.clear();
+      _generatedOtp = null;
     });
     try {
       final check = await widget.api.checkPassengerPhone(phone);
@@ -57,15 +122,100 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await widget.api.sendPassengerOtp(phone);
       setState(() {
         _otpSent = true;
-        _debugOtp = res['otp_in_app'] as String? ?? res['otp_debug'] as String?;
-        if (_debugOtp != null) _otp.text = _debugOtp!;
+        _generatedOtp = res['otp_in_app'] as String? ?? res['otp_debug'] as String?;
         _phoneExists = res['exists'] as bool? ?? _phoneExists;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _otpFocus.requestFocus();
       });
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Widget _buildOtpInput() {
+    const digitStyle = TextStyle(
+      fontFamily: 'monospace',
+      fontSize: 22,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF1E293B),
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+    final code = _otp.text;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('OTP code', style: TextStyle(fontSize: 12, color: Colors.black54)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _otpFocus.requestFocus(),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: Stack(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(6, (i) {
+                    final hasDigit = i < code.length;
+                    final isActive = _otpFocus.hasFocus && i == code.length;
+                    return Container(
+                      width: 44,
+                      height: 52,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isActive ? Colors.black45 : const Color(0xFFE2E8F0),
+                          width: isActive ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Text(hasDigit ? code[i] : '', style: digitStyle),
+                    );
+                  }),
+                ),
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.01,
+                    child: TextField(
+                      controller: _otp,
+                      focusNode: _otpFocus,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        counterText: '',
+                      ),
+                      onSubmitted: (_) => _loading ? null : _verifyOtp(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_generatedOtp != null) ...[
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              'Generated OTP: $_generatedOtp',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black54,
+                fontFamily: 'monospace',
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _verifyOtp() async {
@@ -134,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _otpSent = false;
       _phoneExists = null;
       _otp.clear();
-      _debugOtp = null;
+      _generatedOtp = null;
     });
   }
 
@@ -240,51 +390,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         trailing: TextButton(onPressed: _loading ? null : _resetPhone, child: const Text('Change')),
                       ),
                       const SizedBox(height: 8),
-                      TextField(
-                        controller: _otp,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        decoration: const InputDecoration(
-                          labelText: 'OTP code',
-                          border: OutlineInputBorder(),
-                          counterText: '',
-                        ),
-                        onSubmitted: (_) => _loading ? null : _verifyOtp(),
-                      ),
-                      if (_debugOtp != null) ...[
-                        const SizedBox(height: 12),
-                        Material(
-                          color: const Color(0xFFEDE9FE),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Your OTP code',
-                                  style: TextStyle(fontSize: 13, color: Color(0xFF5B21B6)),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _debugOtp!,
-                                  style: const TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 8,
-                                    color: Color(0xFF5B21B6),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'SMS not connected yet — use this code above.\nIt is filled in automatically.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 12, color: Color(0xFF6D28D9), height: 1.4),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                      _buildOtpInput(),
                     ],
                   ] else if (isStaffLogin) ...[
                     TextField(
@@ -331,6 +437,72 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  if (_loadingServices || _appServices.isNotEmpty) ...[
+                    const SizedBox(height: 28),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Services',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_loadingServices)
+                      const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)))
+                    else
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: _appServices.map((s) {
+                          final iconUrl = _serviceIconUrl(s);
+                          final name = s['name']?.toString() ?? 'Service';
+                          return InkWell(
+                            onTap: () => _openServiceLink(s),
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              width: 80,
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: iconUrl.isNotEmpty
+                                        ? Image.network(iconUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) {
+                                            return Center(
+                                              child: Text(
+                                                name.length >= 2 ? name.substring(0, 2).toUpperCase() : name[0].toUpperCase(),
+                                                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)),
+                                              ),
+                                            );
+                                          })
+                                        : Center(
+                                            child: Text(
+                                              name.length >= 2 ? name.substring(0, 2).toUpperCase() : name[0].toUpperCase(),
+                                              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)),
+                                            ),
+                                          ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    name,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11, color: Colors.black87),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                  ],
                 ],
               ),
             ),

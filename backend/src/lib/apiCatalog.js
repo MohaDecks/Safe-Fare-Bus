@@ -38,6 +38,13 @@ function buildApiCatalog(baseUrl) {
       ],
     },
     {
+      name: "Mobile app",
+      prefix: "/api/mobile",
+      routes: [
+        { method: "GET", path: "/api/mobile/app-services", auth: "none", description: "Linked services on login screen" },
+      ],
+    },
+    {
       name: "Passenger",
       prefix: "/api/passenger",
       routes: [
@@ -169,6 +176,16 @@ function buildApiCatalog(baseUrl) {
         { method: "POST", path: "/api/admin/payment-providers", auth: "token+permission", description: "Add provider" },
         { method: "PATCH", path: "/api/admin/payment-providers/:id", auth: "token+permission", description: "Update provider" },
         { method: "DELETE", path: "/api/admin/payment-providers/:id", auth: "token+permission", description: "Delete provider" },
+      ],
+    },
+    {
+      name: "Admin — App services",
+      prefix: "/api/admin/app-services",
+      routes: [
+        { method: "GET", path: "/api/admin/app-services", auth: "token+permission", description: "Linked app services" },
+        { method: "POST", path: "/api/admin/app-services", auth: "token+permission", description: "Add service" },
+        { method: "PATCH", path: "/api/admin/app-services/:id", auth: "token+permission", description: "Update service" },
+        { method: "DELETE", path: "/api/admin/app-services/:id", auth: "token+permission", description: "Delete service" },
       ],
     },
     {

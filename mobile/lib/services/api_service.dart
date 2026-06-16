@@ -28,6 +28,12 @@ class ApiService {
       throw ApiException(
         'Cannot reach API at ${ApiConfig.baseUrl}. Run: cd backend && npm run dev',
       );
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw ApiException(
+        'Cannot connect to ${ApiConfig.baseUrl}. Hubi server-ka iyo internet.',
+      );
     }
   }
 
@@ -107,8 +113,8 @@ class ApiService {
     return decoded as Map<String, dynamic>;
   }
 
-  Future<List<dynamic>> getList(String path) async {
-    final res = await _request('GET', path);
+  Future<List<dynamic>> getList(String path, {bool auth = true}) async {
+    final res = await _request('GET', path, auth: auth);
     if (res.body.isEmpty) return [];
     final decoded = jsonDecode(res.body);
     if (decoded is List) return decoded;

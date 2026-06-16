@@ -12,6 +12,7 @@ import { renderCorporate } from "./corporate.js";
 import { renderTrips } from "./trips.js";
 import { renderPayments } from "./payments.js";
 import { renderTopup } from "./topup.js";
+import { renderAppServices } from "./appservices.js";
 import { renderAdmins } from "./admins.js";
 import { renderAdminroles } from "./adminroles.js";
 import { renderPermissions } from "./permissions.js";
@@ -28,6 +29,7 @@ const TITLES = {
   trips: ["Trip history", "All passenger bus trips (fare payments)"],
   payments: ["Cashier collections", "Money collected by each cashier (QR fares)"],
   topup: ["Top-up payment apps", "Ethiopian mobile money — logos shown in passenger app"],
+  appservices: ["App services", "Linked apps (APS, parking…) — icons on mobile login screen"],
   admins: ["Admin users", "Only you (Super Admin) can register other admins"],
   adminroles: ["Roles", "Portal admin roles — name & description"],
   permissions: ["Permissions", "Toggle View / Add / Update / Delete per menu"],
@@ -44,6 +46,7 @@ const VIEW_PERM = {
   trips: ["trips.view"],
   payments: ["payments.view"],
   topup: ["topup.view"],
+  appservices: ["appservices.view"],
   adminroles: ["roles.view"],
   permissions: ["permissions.view"],
 };
@@ -59,6 +62,7 @@ const RENDERERS = {
   trips: renderTrips,
   payments: renderPayments,
   topup: renderTopup,
+  appservices: renderAppServices,
   admins: renderAdmins,
   adminroles: renderAdminroles,
   permissions: renderPermissions,

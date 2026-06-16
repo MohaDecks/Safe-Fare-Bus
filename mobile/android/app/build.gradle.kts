@@ -27,9 +27,10 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Minify breaks mobile_scanner / ML Kit in release — keep off until ProGuard rules are complete
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

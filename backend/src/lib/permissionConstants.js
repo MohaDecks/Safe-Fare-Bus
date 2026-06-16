@@ -11,6 +11,7 @@ const PERMISSION_MENUS = [
   { menu: "Trip history", parent: "—", slug: "trips", view: true, add: false, update: false, delete: false },
   { menu: "Cashier money", parent: "—", slug: "payments", view: true, add: false, update: false, delete: false },
   { menu: "Top-up apps", parent: "—", slug: "topup", view: true, add: true, update: true, delete: true },
+  { menu: "App services", parent: "—", slug: "appservices", view: true, add: true, update: true, delete: true },
   { menu: "Admin users", parent: "Settings", slug: "admins", view: true, add: true, update: true, delete: true },
   { menu: "Roles", parent: "Settings", slug: "roles", view: true, add: true, update: true, delete: true },
   { menu: "Permissions", parent: "Settings", slug: "permissions", view: true, add: false, update: true, delete: false },

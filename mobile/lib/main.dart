@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/passenger/passenger_shell.dart';
@@ -9,7 +10,22 @@ import 'config/api_config.dart';
 import 'services/api_service.dart';
 import 'models/user.dart';
 
-void main() => runApp(const SafeFareApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    if (kDebugMode) {
+      FlutterError.dumpErrorToConsole(details);
+    }
+  };
+  runZonedGuarded(
+    () => runApp(const SafeFareApp()),
+    (error, stack) {
+      if (kDebugMode) {
+        debugPrint('SafeFare crash: $error\n$stack');
+      }
+    },
+  );
+}
 
 class SafeFareApp extends StatelessWidget {
   const SafeFareApp({super.key});
@@ -75,9 +91,10 @@ class _SplashGateState extends State<SplashGate> {
     } on ApiException catch (e) {
       await _api.logout();
       _bootMessage = e.message;
-    } catch (_) {
+    } catch (e) {
       await _api.logout();
-      _bootMessage = 'Cannot connect to ${ApiConfig.baseUrl}';
+      _bootMessage = 'Cannot connect to ${ApiConfig.baseUrl}. Hubi server-ka iyo internet.';
+      if (kDebugMode) debugPrint('Boot error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

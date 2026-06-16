@@ -1,5 +1,19 @@
 const cors = require("cors");
 
+/** Flutter web / Vite dev servers use random localhost ports */
+function isLocalDevOrigin(origin) {
+  if (!origin) return false;
+  try {
+    const u = new URL(origin);
+    return (
+      u.protocol === "http:" &&
+      (u.hostname === "localhost" || u.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function buildCorsOptions() {
   const port = process.env.PORT || 4000;
   const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${port}`).replace(/\/$/, "");
@@ -26,7 +40,7 @@ function buildCorsOptions() {
 
   return {
     origin(origin, callback) {
-      if (allowAll || !origin || allowed.includes(origin)) {
+      if (allowAll || !origin || allowed.includes(origin) || isLocalDevOrigin(origin)) {
         callback(null, true);
         return;
       }

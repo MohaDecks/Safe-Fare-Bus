@@ -28,6 +28,7 @@ export const ADMIN_NAV_ALL = [
   { id: "trips", icon: "🎫", label: "Trip history", perm: ["trips.view"] },
   { id: "payments", icon: "💳", label: "Cashier money", perm: ["payments.view"] },
   { id: "topup", icon: "📲", label: "Top-up apps", perm: ["topup.view"] },
+  { id: "appservices", icon: "🔗", label: "App services", perm: ["appservices.view"] },
   { id: "admins", icon: "👤", label: "Admin users", perm: ["admins.view"] },
   { id: "adminroles", icon: "🛡️", label: "Roles", perm: ["roles.view"] },
   { id: "permissions", icon: "🔐", label: "Permissions", perm: ["permissions.view"] },
