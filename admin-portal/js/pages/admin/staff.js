@@ -28,7 +28,7 @@ export async function renderStaff(content) {
                 <td>${s.phone || "—"}</td></tr>`
                 )
                 .join("")}</tbody></table>`
-              : `<div class="empty-state">No staff registered. Add cashiers or employers.</div>`
+              : `<div class="empty-state">No staff registered. Add cashiers.</div>`
           }
         </div>
       </div>`;

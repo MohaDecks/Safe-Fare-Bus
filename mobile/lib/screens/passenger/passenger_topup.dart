@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
+import '../../utils/payment_feedback.dart';
+import '../../widgets/payment_dialogs.dart';
 
 class PassengerTopUp extends StatefulWidget {
   final ApiService api;
+  final VoidCallback? onWalletChanged;
 
-  const PassengerTopUp({super.key, required this.api});
+  const PassengerTopUp({super.key, required this.api, this.onWalletChanged});
 
   @override
   State<PassengerTopUp> createState() => PassengerTopUpState();
 }
 
 class PassengerTopUpState extends State<PassengerTopUp> {
-  void refreshFromAdmin() => _loadProviders();
+  void refreshFromAdmin() => refreshData();
+
+  Future<void> refreshData({bool silent = false}) => _loadProviders(silent: silent);
 
   final _amount = TextEditingController(text: '100');
   bool _loading = false;
@@ -33,11 +38,13 @@ class PassengerTopUpState extends State<PassengerTopUp> {
     super.dispose();
   }
 
-  Future<void> _loadProviders() async {
-    setState(() {
-      _loadingProviders = true;
-      _loadError = null;
-    });
+  Future<void> _loadProviders({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loadingProviders = true;
+        _loadError = null;
+      });
+    }
     try {
       final list = await widget.api.getList('/wallet/payment-providers');
       if (!mounted) return;
@@ -54,6 +61,7 @@ class PassengerTopUpState extends State<PassengerTopUp> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (silent) return;
       setState(() {
         _loadingProviders = false;
         _loadError = e.message;
@@ -62,6 +70,7 @@ class PassengerTopUpState extends State<PassengerTopUp> {
       });
     } catch (e) {
       if (!mounted) return;
+      if (silent) return;
       setState(() {
         _loadingProviders = false;
         _loadError = 'Cannot reach server. Start backend: npm run dev (port 4000)';
@@ -110,20 +119,25 @@ class PassengerTopUpState extends State<PassengerTopUp> {
         'amount_birr': amount,
         'payment_provider_id': _selectedProviderId,
       });
-      if (mounted) {
-        final provider = res['provider']?.toString() ?? '';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              provider.isNotEmpty
-                  ? '$provider — ${formatBirr((res['balance_birr'] as num?) ?? 0)}'
-                  : formatBirr((res['balance_birr'] as num?) ?? 0),
-            ),
-          ),
-        );
-      }
+      if (!mounted) return;
+      widget.onWalletChanged?.call();
+      await PaymentFeedback.playSuccess();
+      if (!mounted) return;
+      await showTopUpSuccessDialog(
+        context,
+        addedBirr: (res['added_birr'] as num?) ?? amount,
+        balanceBirr: (res['balance_birr'] as num?) ?? 0,
+        provider: res['provider']?.toString(),
+      );
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (!mounted) return;
+      await PaymentFeedback.playError();
+      if (!mounted) return;
+      if (isInsufficientBalanceError(e.message, data: e.data)) {
+        await showInsufficientBalanceDialog(context, message: e.message);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -265,7 +279,7 @@ class PassengerTopUpState extends State<PassengerTopUp> {
       appBar: AppBar(
         title: const Text('Top up'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadProviders),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () => refreshData()),
         ],
       ),
       body: Column(
@@ -296,7 +310,7 @@ class PassengerTopUpState extends State<PassengerTopUp> {
           ),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: _loadProviders,
+              onRefresh: () => refreshData(),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [

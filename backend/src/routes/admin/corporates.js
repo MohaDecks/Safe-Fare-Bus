@@ -53,7 +53,7 @@ router.post("/", requirePermission("corporate.add"), async (req, res) => {
   res.status(201).json({
     ...result.user.toPublic(),
     company_name: result.user.corporate_name,
-    message: "Give this email and password to the company for app → Corporate login",
+    message: "Give this email and password to the company for web portal login at /admin/",
   });
 });
 
@@ -82,6 +82,38 @@ router.patch("/:id", requirePermission("corporate.update"), async (req, res) => 
   if (active != null) user.active = !!active;
   await user.save();
   res.json(user.toPublic());
+});
+
+router.post("/:id/topup", requirePermission("corporate.update"), async (req, res) => {
+  const amount = Number(req.body?.amount_birr);
+  if (!amount || amount <= 0) return res.status(400).json({ detail: "Invalid amount" });
+
+  const user = await User.findOne({
+    _id: req.params.id,
+    role: "corporate",
+    company_id: req.user.company_id,
+  });
+  if (!user) return res.status(404).json({ detail: "Corporate account not found" });
+
+  let wallet = await Wallet.findOne({ user_id: user._id });
+  if (!wallet) wallet = await Wallet.create({ user_id: user._id, balance_birr: 0 });
+  wallet.balance_birr += amount;
+  await wallet.save();
+
+  const Transaction = require("../../models/Transaction");
+  await Transaction.create({
+    user_id: user._id,
+    type: "topup",
+    amount_birr: amount,
+    balance_after_birr: wallet.balance_birr,
+    description: req.body?.note?.trim() || `Admin top-up for ${user.corporate_name || user.name}`,
+  });
+
+  res.json({
+    balance_birr: wallet.balance_birr,
+    added_birr: amount,
+    company_name: user.corporate_name || user.name,
+  });
 });
 
 module.exports = router;

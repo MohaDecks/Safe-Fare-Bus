@@ -21,7 +21,7 @@ export async function renderCustomers(content) {
                 <td>${c.row}</td>
                 <td><strong>${c.name}</strong><br/><small style="color:var(--muted)">${c.email}</small></td>
                 <td>${c.phone_display || c.phone}</td>
-                <td>${c.corporate_name ? `<span class="badge badge-blue">${c.corporate_name}</span>` : "—"}${c.pays_via_company ? '<br/><small style="color:var(--muted)">Company pays fare</small>' : ""}</td>
+                <td>${c.corporate_name ? `<span class="badge badge-blue">${c.corporate_name}</span>` : "—"}${c.pays_via_company ? '<br/><small style="color:var(--muted)">Company employee</small>' : ""}</td>
                 <td>${formatBirr(c.wallet_birr)}</td>
                 <td>${c.active ? '<span class="badge badge-green">Active</span>' : '<span class="badge">Off</span>'}${c.has_pending_otp ? ' <span class="badge badge-amber">OTP pending</span>' : ""}</td>
                 <td><small>${new Date(c.created_at).toLocaleString()}</small></td>

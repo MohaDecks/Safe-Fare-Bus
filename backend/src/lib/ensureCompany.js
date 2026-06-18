@@ -8,7 +8,7 @@ async function ensureCompany() {
 
   if (!company) {
     const superAdmin = await User.findOne({ role: "admin", is_super_admin: true });
-    const name = process.env.DEFAULT_COMPANY_NAME || "SafeFare Bus Company";
+    const name = process.env.DEFAULT_COMPANY_NAME || "Dirshay Bus";
     company = await Company.create({
       name,
       admin_id: superAdmin?._id || null,

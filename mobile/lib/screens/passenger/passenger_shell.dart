@@ -19,27 +19,29 @@ class PassengerShell extends StatefulWidget {
 
 class _PassengerShellState extends State<PassengerShell> {
   int _index = 0;
-  int _topUpBuild = 0;
+  final _homeKey = GlobalKey<PassengerHomeState>();
+  final _historyKey = GlobalKey<PassengerHistoryState>();
+  final _topUpKey = GlobalKey<PassengerTopUpState>();
+
+  void _refreshWalletData() {
+    _homeKey.currentState?.refreshData(silent: true);
+    _historyKey.currentState?.refreshData(silent: true);
+  }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      PassengerHome(user: widget.user, api: widget.api, onLogout: widget.onLogout),
-      PassengerScan(api: widget.api),
-      PassengerTopUp(key: ValueKey('topup-$_topUpBuild'), api: widget.api),
-      PassengerHistory(api: widget.api),
+      PassengerHome(key: _homeKey, user: widget.user, api: widget.api, onLogout: widget.onLogout),
+      PassengerScan(api: widget.api, user: widget.user, onWalletChanged: _refreshWalletData),
+      PassengerTopUp(key: _topUpKey, api: widget.api, onWalletChanged: _refreshWalletData),
+      PassengerHistory(key: _historyKey, api: widget.api),
     ];
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) {
-          setState(() {
-            _index = i;
-            if (i == 2) _topUpBuild++;
-          });
-        },
+        onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Pay'),

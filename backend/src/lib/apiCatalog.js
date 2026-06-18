@@ -81,17 +81,6 @@ function buildApiCatalog(baseUrl) {
       ],
     },
     {
-      name: "Employer (portal)",
-      prefix: "/api/employer",
-      routes: [
-        { method: "GET", path: "/api/employer/account", auth: "token+employer", description: "Employer account" },
-        { method: "GET", path: "/api/employer/staff", auth: "token+employer", description: "Staff list" },
-        { method: "GET", path: "/api/employer/allocations", auth: "token+employer", description: "Allowance allocations" },
-        { method: "POST", path: "/api/employer/staff", auth: "token+employer", description: "Add staff" },
-        { method: "POST", path: "/api/employer/allocate", auth: "token+employer", description: "Allocate allowance" },
-      ],
-    },
-    {
       name: "Admin",
       prefix: "/api/admin",
       routes: [
@@ -232,7 +221,6 @@ function buildApiCatalog(baseUrl) {
       "token+mobile": "JWT + passenger mobile role",
       "token+cashier": "JWT + cashier role",
       "token+corporate": "JWT + corporate role",
-      "token+employer": "JWT + employer role",
       "token+admin": "JWT + super admin",
       "token+permission": "JWT + admin permission",
     },

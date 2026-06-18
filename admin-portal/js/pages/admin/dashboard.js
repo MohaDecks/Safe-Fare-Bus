@@ -131,7 +131,7 @@ export async function renderDashboard(content) {
           <div class="card-body">
             <ul class="dash-list">
               <li>Total trips (all time): <strong>${rev.total_trips}</strong></li>
-              <li>Staff (cashier / employer): <strong>${staff.length}</strong></li>
+              <li>Staff (cashiers): <strong>${staff.length}</strong></li>
               <li>Payments (14 days): <strong>${s.period_payments ?? 0}</strong></li>
               <li>Top-ups (14 days): <strong>${formatBirr(s.period_topup_birr)}</strong></li>
             </ul>

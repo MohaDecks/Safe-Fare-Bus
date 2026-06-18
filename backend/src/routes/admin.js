@@ -234,9 +234,7 @@ router.post("/staff", requirePermission("staff.add"), async (req, res) => {
     phone: phone || "",
     company_id: req.user.company_id,
   });
-  if (role === "employer") {
-    await Wallet.create({ user_id: user._id, balance_birr: 10000 });
-  } else if (roleMeta.can_use_mobile) {
+  if (roleMeta.can_use_mobile) {
     await Wallet.create({ user_id: user._id, balance_birr: 0 });
   }
   res.status(201).json(user.toPublic());

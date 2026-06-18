@@ -151,17 +151,11 @@ async function verifyPassengerOtp({ phone, otp }) {
   };
 }
 
-async function completePassengerRegistration(user, { name, email }) {
+async function completePassengerRegistration(user, { name }) {
   const displayName = (name || "").trim();
-  const mail = (email || "").toLowerCase().trim();
   if (!displayName) return { ok: false, detail: "Name required" };
-  if (!mail || !mail.includes("@")) return { ok: false, detail: "Valid email required" };
-
-  const dup = await User.findOne({ email: mail, _id: { $ne: user._id } });
-  if (dup) return { ok: false, detail: "Email already in use" };
 
   user.name = displayName;
-  user.email = mail;
   user.profile_complete = true;
   await user.save();
 

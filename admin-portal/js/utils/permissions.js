@@ -1,4 +1,4 @@
-import { ADMIN_NAV_ALL, CASHIER_NAV, EMPLOYER_NAV } from "../core/config.js";
+import { ADMIN_NAV_ALL, CASHIER_NAV, CORPORATE_NAV } from "../core/config.js";
 import { state } from "../core/state.js";
 
 export function expandPermKeys(keys) {
@@ -33,12 +33,13 @@ export function getAdminNav() {
 export function staffNav(user) {
   const home = user.portal_home || "dashboard";
   if (home === "qr") return CASHIER_NAV;
-  if (home === "employer") return EMPLOYER_NAV;
+  if (home === "corporate") return CORPORATE_NAV;
   return [{ id: "dashboard", icon: "📊", label: "Dashboard" }];
 }
 
 export function defaultStaffView(user) {
   const home = user.portal_home || "dashboard";
   if (home === "qr") return "qr";
+  if (home === "corporate") return "dashboard";
   return "dashboard";
 }

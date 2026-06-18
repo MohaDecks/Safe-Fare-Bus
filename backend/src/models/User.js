@@ -12,11 +12,11 @@ const userSchema = new mongoose.Schema(
     is_super_admin: { type: Boolean, default: false },
     admin_role_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdminRole", default: null },
     active: { type: Boolean, default: true },
-    /** Passenger app — false until name + email submitted after first OTP */
+    /** Passenger app — false until name submitted after first OTP */
     profile_complete: { type: Boolean, default: true },
     /** Corporate account — company display name */
     corporate_name: { type: String, default: "" },
-    /** Passenger sponsored by corporate employer (fare from company wallet) */
+    /** Passenger linked to corporate company (company can top up their wallet) */
     sponsored_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true }

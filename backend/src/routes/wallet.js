@@ -3,6 +3,8 @@ const Wallet = require("../models/Wallet");
 const Transaction = require("../models/Transaction");
 const PaymentProvider = require("../models/PaymentProvider");
 const Company = require("../models/Company");
+const CorporateTopUpRequest = require("../models/CorporateTopUpRequest");
+const User = require("../models/User");
 const { requireAuth } = require("../middleware/auth");
 const { requireMobileApp } = require("../middleware/staffRole");
 const { apiBaseUrl } = require("../lib/providerLogo");
@@ -20,7 +22,15 @@ async function getOrCreateWallet(userId) {
 
 router.get("/", requireMobileApp, async (req, res) => {
   const wallet = await getOrCreateWallet(req.user._id);
-  res.json({ balance_birr: wallet.balance_birr });
+  const out = {
+    balance_birr: wallet.balance_birr,
+    pays_via_company: !!req.user.sponsored_by,
+  };
+  if (req.user.sponsored_by) {
+    const corp = await User.findById(req.user.sponsored_by).select("corporate_name name");
+    out.corporate_name = corp?.corporate_name || corp?.name || "";
+  }
+  res.json(out);
 });
 
 router.get("/transactions", requireMobileApp, async (req, res) => {
@@ -104,6 +114,49 @@ router.post("/topup", requireMobileApp, async (req, res) => {
     added_birr: amount,
     provider: provider.name,
   });
+});
+
+/** Employee sponsored by corporate — request wallet top-up from company */
+router.post("/company-request", requireMobileApp, async (req, res) => {
+  if (req.user.role !== "passenger") {
+    return res.status(403).json({ detail: "Passengers only" });
+  }
+  if (!req.user.sponsored_by) {
+    return res.status(400).json({ detail: "You are not linked to a corporate company" });
+  }
+
+  const amount = Number(req.body?.amount_birr);
+  if (!amount || amount <= 0) return res.status(400).json({ detail: "Invalid amount" });
+
+  const corp = await User.findOne({ _id: req.user.sponsored_by, role: "corporate", active: { $ne: false } });
+  if (!corp) return res.status(400).json({ detail: "Corporate company not found" });
+
+  const pending = await CorporateTopUpRequest.findOne({
+    passenger_user_id: req.user._id,
+    status: "pending",
+  });
+  if (pending) {
+    return res.status(400).json({ detail: "You already have a pending request — wait for company approval" });
+  }
+
+  const row = await CorporateTopUpRequest.create({
+    corporate_user_id: corp._id,
+    passenger_user_id: req.user._id,
+    amount_birr: amount,
+    note: (req.body?.note || "").trim(),
+  });
+
+  res.status(201).json(row.toPublic(req.user));
+});
+
+router.get("/company-requests", requireMobileApp, async (req, res) => {
+  if (req.user.role !== "passenger") {
+    return res.status(403).json({ detail: "Passengers only" });
+  }
+  const rows = await CorporateTopUpRequest.find({ passenger_user_id: req.user._id })
+    .sort({ createdAt: -1 })
+    .limit(30);
+  res.json(rows.map((r) => r.toPublic(req.user)));
 });
 
 module.exports = router;

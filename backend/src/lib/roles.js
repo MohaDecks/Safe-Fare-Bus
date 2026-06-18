@@ -1,5 +1,8 @@
 const Role = require("../models/Role");
 
+/** Legacy roles removed from staff portal — use Corporate companies instead */
+const DEPRECATED_STAFF_ROLE_SLUGS = ["employer", "employee"];
+
 function normSlug(s) {
   return String(s || "").toLowerCase().trim();
 }
@@ -9,7 +12,7 @@ async function getRolesForCompany(companyId) {
     ? await Role.find({ company_id: companyId }).sort({ sort_order: 1, label: 1 })
     : [];
   const legacy = await Role.find({ company_id: null, slug: { $ne: "admin" } }).sort({ sort_order: 1 });
-  return [...legacy, ...company];
+  return [...legacy, ...company].filter((r) => !DEPRECATED_STAFF_ROLE_SLUGS.includes(normSlug(r.slug)));
 }
 
 async function findRoleForUser(user) {
@@ -24,17 +27,18 @@ async function findRoleForUser(user) {
 }
 
 function resolvePortalHome(roleDef, userRole) {
+  if (DEPRECATED_STAFF_ROLE_SLUGS.includes(normSlug(userRole))) return "none";
   if (roleDef?.portal_home && roleDef.portal_home !== "none") return roleDef.portal_home;
   if (userRole === "cashier") return "qr";
-  if (userRole === "employer") return "employer";
   return "dashboard";
 }
 
 async function userHasPortalAccess(user) {
+  if (DEPRECATED_STAFF_ROLE_SLUGS.includes(normSlug(user.role))) return false;
   if (user.role === "admin") return true;
   const roleDef = await findRoleForUser(user);
   if (roleDef) return !!roleDef.can_use_portal;
-  return user.role === "cashier" || user.role === "employer";
+  return user.role === "cashier";
 }
 
 async function userHasMobileAccess(user) {
@@ -50,8 +54,11 @@ async function getAssignableRoleSlugs(companyId) {
 }
 
 async function validateStaffRole(slug, companyId) {
-  const roles = await getRolesForCompany(companyId);
   const want = normSlug(slug);
+  if (DEPRECATED_STAFF_ROLE_SLUGS.includes(want)) {
+    return { ok: false, detail: "Employer/employee roles removed — use Corporate companies" };
+  }
+  const roles = await getRolesForCompany(companyId);
   const role = roles.find((r) => normSlug(r.slug) === want);
   if (!role) return { ok: false, detail: "Invalid role — add it on Staff roles page first" };
   if (want === "admin") return { ok: false, detail: "Cannot create admin here. Use Admin users page." };
@@ -79,6 +86,7 @@ async function getQrCollectorSlugs(companyId) {
 }
 
 module.exports = {
+  DEPRECATED_STAFF_ROLE_SLUGS,
   normSlug,
   userRoleMatchesSlugs,
   getRolesForCompany,

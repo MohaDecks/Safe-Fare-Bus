@@ -8,6 +8,7 @@ import { isReportView, reloadView, showAuth, setActiveView } from "./navigation.
 import { renderAdminSidebar } from "../components/sidebar.js";
 import { renderAdminView } from "../pages/admin/index.js";
 import { renderCashierView } from "../pages/cashier/index.js";
+import { renderCorporatePortalView } from "../pages/corporatePortal/index.js";
 import { sidebarBrandHtml, hideBootSplash } from "../core/brand.js";
 import { DEFAULT_BRAND_NAME } from "../core/config.js";
 
@@ -90,11 +91,9 @@ export async function loadView() {
 
   try {
     if (user.role === "admin") await renderAdminView(header, content);
+    else if ((user.portal_home || "") === "corporate") await renderCorporatePortalView(header, content);
     else if ((user.portal_home || "") === "qr") await renderCashierView(header, content);
-    else if ((user.portal_home || "") === "employer") {
-      header.innerHTML = `<div><h1>Employer moved to app</h1><p>Use SafeFare mobile → Corporate</p></div>`;
-      content.innerHTML = `<div class="card"><div class="card-body"><p>Company allowance is in the <strong>mobile app → Corporate</strong>. Admin registers companies under <strong>Corporate companies</strong> and gives them login credentials.</p></div></div>`;
-    } else {
+    else {
       header.innerHTML = `<div><h1>Dashboard</h1></div>`;
       content.innerHTML = `<div class="card"><div class="card-body"><p>Welcome, ${user.name}</p></div></div>`;
     }

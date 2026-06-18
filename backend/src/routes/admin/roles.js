@@ -15,7 +15,7 @@ function parseAccess(body, fallback) {
 
 function parsePortalHome(body, portal, mobile, fallback) {
   const v = body.portal_home;
-  if (v === "qr" || v === "employer" || v === "dashboard" || v === "none") return v;
+  if (v === "qr" || v === "dashboard" || v === "none") return v;
   if (!portal) return "none";
   if (mobile && !portal) return "none";
   return fallback.portal_home || "dashboard";

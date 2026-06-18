@@ -1,4 +1,4 @@
-import { ADMIN_NAV_ALL, CASHIER_NAV, EMPLOYER_NAV } from "./config.js";
+import { ADMIN_NAV_ALL, CASHIER_NAV, CORPORATE_NAV } from "./config.js";
 import { state } from "./state.js";
 import { defaultStaffView, expandPermKeys } from "../utils/permissions.js";
 
@@ -26,7 +26,7 @@ function isViewAllowed(user, view) {
 
   const home = user.portal_home || "dashboard";
   if (home === "qr") return CASHIER_NAV.some((n) => n.id === view);
-  if (home === "employer") return EMPLOYER_NAV.some((n) => n.id === view);
+  if (home === "corporate") return CORPORATE_NAV.some((n) => n.id === view);
   return view === "dashboard";
 }
 

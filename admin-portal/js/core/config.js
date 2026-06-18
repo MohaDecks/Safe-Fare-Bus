@@ -3,7 +3,7 @@ export const TOKEN_KEY = "sf_token";
 
 /** Default branding when admin has not uploaded a company logo */
 export const DEFAULT_LOGO = "assets/safefare-logo.png";
-export const DEFAULT_BRAND_NAME = "Safe Fare";
+export const DEFAULT_BRAND_NAME = "Dirshay Bus";
 export const DEFAULT_TAGLINE = "Smart Bus Fare & Ticketing Platform";
 
 export const CASHIER_NAV = [
@@ -11,10 +11,9 @@ export const CASHIER_NAV = [
   { id: "dashboard", icon: "📊", label: "Dashboard" },
 ];
 
-export const EMPLOYER_NAV = [
-  { id: "dashboard", icon: "📊", label: "Dashboard" },
-  { id: "staff", icon: "👥", label: "Staff" },
-  { id: "allocate", icon: "💰", label: "Allowances" },
+export const CORPORATE_NAV = [
+  { id: "dashboard", icon: "📊", label: "Company wallet" },
+  { id: "employees", icon: "👥", label: "Customers" },
 ];
 
 export const ADMIN_NAV_ALL = [

@@ -18,9 +18,14 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _name = TextEditingController();
-  final _email = TextEditingController();
   bool _loading = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     setState(() {
@@ -28,10 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
     try {
-      final res = await widget.api.completePassengerRegistration(
-        _name.text.trim(),
-        _email.text.trim(),
-      );
+      final res = await widget.api.completePassengerRegistration(_name.text.trim());
       widget.onComplete(AppUser.fromJson(res['user'] as Map<String, dynamic>));
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -52,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Welcome! Enter your name and email to finish setting up your account.',
+                'Welcome! Enter your name to finish setting up your account.',
                 style: TextStyle(color: Colors.black54, height: 1.4),
               ),
               const SizedBox(height: 20),
@@ -63,15 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: 'Full name',
                   border: OutlineInputBorder(),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
+                onSubmitted: _loading ? null : (_) => _submit(),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),

@@ -2,28 +2,31 @@ import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../utils/phone_input.dart';
+import '../widgets/brand_logo.dart';
+import '../widgets/service_hover_tile.dart';
+import '../models/branding.dart';
+import 'service_webview_screen.dart';
 
-enum LoginMode { passenger, cashier, corporate }
+enum LoginMode { passenger, cashier }
 
 class LoginScreen extends StatefulWidget {
   final ApiService api;
   final void Function(AppUser user, {required bool needsRegistration}) onVerified;
   final void Function(AppUser user) onCashierVerified;
-  final void Function(AppUser user) onCorporateVerified;
   final String? bootMessage;
+  final AppBranding branding;
 
   const LoginScreen({
     super.key,
     required this.api,
     required this.onVerified,
     required this.onCashierVerified,
-    required this.onCorporateVerified,
     this.bootMessage,
+    this.branding = AppBranding.fallback,
   });
 
   @override
@@ -75,15 +78,15 @@ class _LoginScreenState extends State<LoginScreen> {
     return '${ApiConfig.baseUrl}$url';
   }
 
-  Future<void> _openServiceLink(Map<String, dynamic> service) async {
+  void _openServiceLink(Map<String, dynamic> service) {
     final raw = service['link_url']?.toString() ?? '';
     if (raw.isEmpty) return;
-    final uri = Uri.parse(raw.startsWith('http') ? raw : 'http://$raw');
-    try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Ma furi karo link-ga. Hubi internet.');
-    }
+    final name = service['name']?.toString() ?? 'Service';
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ServiceWebViewScreen(title: name, url: raw),
+      ),
+    );
   }
 
   @override
@@ -237,25 +240,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _corporateLogin() async {
-    final email = _email.text.trim();
-    final pass = _password.text;
-    if (email.isEmpty || pass.isEmpty) {
-      setState(() => _error = 'Email and password required');
-      return;
-    }
-    setState(() { _loading = true; _error = null; });
-    try {
-      final res = await widget.api.corporateLogin(email, pass);
-      await widget.api.setToken(res['access_token'] as String);
-      widget.onCorporateVerified(AppUser.fromJson(res['user'] as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
   Future<void> _cashierLogin() async {
     final email = _email.text.trim();
     final pass = _password.text;
@@ -299,39 +283,29 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isPassenger = _mode == LoginMode.passenger;
-    final isCorporate = _mode == LoginMode.corporate;
-    final isStaffLogin = _mode == LoginMode.cashier || isCorporate;
+    final isCashier = _mode == LoginMode.cashier;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7C3AED),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.directions_bus, color: Colors.white, size: 30),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'SafeFare',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF5B21B6)),
-                  ),
-                  const SizedBox(height: 16),
+                  BrandLogo(branding: widget.branding, height: 96, maxWidth: 240),
+                  const SizedBox(height: 20),
                   SegmentedButton<LoginMode>(
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 12),
+                      visualDensity: VisualDensity.compact,
+                    ),
                     segments: const [
                       ButtonSegment(value: LoginMode.passenger, label: Text('Passenger')),
                       ButtonSegment(value: LoginMode.cashier, label: Text('Cashier')),
-                      ButtonSegment(value: LoginMode.corporate, label: Text('Corporate')),
                     ],
                     selected: {_mode},
                     onSelectionChanged: (s) => _onModeChange(s.first),
@@ -340,9 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     isPassenger
                         ? 'Lambarka → OTP → gal ama diiwaangeli'
-                        : isCorporate
-                            ? 'Login from admin — email & password only'
-                            : 'Cashier login — email & password from admin',
+                        : 'Cashier login — email & password from admin',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.black54, height: 1.4),
                   ),
@@ -385,14 +357,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         subtitle: Text(
                           _phoneExists == true
                               ? 'Account found — enter OTP to sign in'
-                              : 'New number — enter OTP, then register name & email',
+                              : 'New number — enter OTP, then register your name',
                         ),
                         trailing: TextButton(onPressed: _loading ? null : _resetPhone, child: const Text('Change')),
                       ),
                       const SizedBox(height: 8),
                       _buildOtpInput(),
                     ],
-                  ] else if (isStaffLogin) ...[
+                  ] else if (isCashier) ...[
                     TextField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
@@ -411,7 +383,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.lock),
                       ),
-                      onSubmitted: (_) => _loading ? null : (isCorporate ? _corporateLogin() : _cashierLogin()),
+                      onSubmitted: (_) => _loading ? null : _cashierLogin(),
                     ),
                   ],
                   if (_error != null) ...[
@@ -427,13 +399,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? null
                           : (isPassenger
                               ? (_otpSent ? _verifyOtp : _checkPhoneAndSendOtp)
-                              : (isCorporate ? _corporateLogin : _cashierLogin)),
+                              : _cashierLogin),
                       child: Text(
                         _loading
                             ? 'Please wait…'
                             : (isPassenger
                                 ? (_otpSent ? 'Verify OTP' : 'Continue')
-                                : (isCorporate ? 'Corporate sign in' : 'Cashier sign in')),
+                                : 'Cashier sign in'),
                       ),
                     ),
                   ),
@@ -450,55 +422,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)))
                     else
                       Wrap(
-                        spacing: 16,
-                        runSpacing: 16,
+                        spacing: 12,
+                        runSpacing: 12,
                         alignment: WrapAlignment.center,
                         children: _appServices.map((s) {
                           final iconUrl = _serviceIconUrl(s);
                           final name = s['name']?.toString() ?? 'Service';
-                          return InkWell(
+                          return ServiceHoverTile(
+                            name: name,
+                            iconUrl: iconUrl,
                             onTap: () => _openServiceLink(s),
-                            borderRadius: BorderRadius.circular(12),
-                            child: SizedBox(
-                              width: 80,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 56,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: iconUrl.isNotEmpty
-                                        ? Image.network(iconUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) {
-                                            return Center(
-                                              child: Text(
-                                                name.length >= 2 ? name.substring(0, 2).toUpperCase() : name[0].toUpperCase(),
-                                                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)),
-                                              ),
-                                            );
-                                          })
-                                        : Center(
-                                            child: Text(
-                                              name.length >= 2 ? name.substring(0, 2).toUpperCase() : name[0].toUpperCase(),
-                                              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)),
-                                            ),
-                                          ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    name,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11, color: Colors.black87),
-                                  ),
-                                ],
-                              ),
-                            ),
                           );
                         }).toList(),
                       ),

@@ -68,9 +68,26 @@ router.post("/login", async (req, res) => {
     return res.status(403).json({ detail: "Admin account is disabled" });
   }
   if (user.role === "corporate") {
-    return res.status(403).json({ detail: "Companies use the mobile app → Corporate login" });
+    if (user.active === false) {
+      return res.status(403).json({ detail: "Account disabled — contact bus admin" });
+    }
+    const remember = req.body?.remember !== false;
+    return res.json({
+      access_token: signToken(user, { remember }),
+      user: {
+        ...user.toPublic(),
+        portal_home: "corporate",
+        company_name: user.corporate_name || user.name,
+      },
+    });
   }
   if (user.role !== "admin") {
+    const { DEPRECATED_STAFF_ROLE_SLUGS, normSlug } = require("../lib/roles");
+    if (DEPRECATED_STAFF_ROLE_SLUGS.includes(normSlug(user.role))) {
+      return res.status(403).json({
+        detail: "Employer/employee portal removed — use Corporate companies or mobile app",
+      });
+    }
     const roleDef = await findRoleForUser(user);
     const mobileOnly = roleDef && roleDef.can_use_mobile && !roleDef.can_use_portal;
     if (user.role === "passenger" || mobileOnly) {
@@ -97,7 +114,8 @@ router.post("/refresh", requireAuth, async (req, res) => {
     return res.status(403).json({ detail: "Admin account is disabled" });
   }
   if (req.user.role === "corporate") {
-    return res.status(403).json({ detail: "Use the mobile app for this account" });
+    const remember = req.body?.remember !== false;
+    return res.json({ access_token: signToken(req.user, { remember }) });
   }
   if (req.user.role !== "admin") {
     if (!(await userHasPortalAccess(req.user))) {

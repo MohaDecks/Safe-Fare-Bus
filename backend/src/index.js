@@ -12,7 +12,6 @@ const adminRoutes = require("./routes/admin");
 const cashierRoutes = require("./routes/cashier");
 const walletRoutes = require("./routes/wallet");
 const passengerRoutes = require("./routes/passenger");
-const employerRoutes = require("./routes/employer");
 const corporateRoutes = require("./routes/corporate");
 const adminRolesRoutes = require("./routes/admin/roles");
 const adminPaymentProvidersRoutes = require("./routes/admin/paymentProviders");
@@ -28,6 +27,7 @@ const mobileRoutes = require("./routes/mobile");
 const pathUploads = path.join(__dirname, "../uploads");
 const { ensureMenus } = require("./lib/ensureMenus");
 const { ensureCompany } = require("./lib/ensureCompany");
+const { ensureDeprecatedStaffRolesRemoved } = require("./lib/ensureDeprecatedStaffRoles");
 const { migrateLegacyRolePermissions } = require("./lib/migrateRolePermissions");
 
 const app = express();
@@ -76,10 +76,10 @@ app.get("/api/branding", async (_req, res) => {
   const { logoUrl } = require("./lib/companyLogo");
   const company = await Company.findOne().sort({ createdAt: 1 });
   if (!company) {
-    return res.json({ name: "SafeFare", logo_url: "" });
+    return res.json({ name: "Dirshay Bus", logo_url: "" });
   }
   res.json({
-    name: company.name || "SafeFare",
+    name: company.name || "Dirshay Bus",
     logo_url: logoUrl(company.logo_path || "", _req),
   });
 });
@@ -100,7 +100,6 @@ app.use("/api/mobile", mobileRoutes);
 app.use("/api/cashier", cashierRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/passenger", passengerRoutes);
-app.use("/api/employer", employerRoutes);
 app.use("/api/corporate", corporateRoutes);
 
 // Staff portal — no redirects (avoids ERR_TOO_MANY_REDIRECTS loop)
@@ -112,6 +111,7 @@ app.use("/admin", express.static(adminPortalPath, { redirect: false }));
 async function main() {
   await connectDb();
   await ensureCompany();
+  await ensureDeprecatedStaffRolesRemoved();
   await ensureMenus();
   try {
     await migrateLegacyRolePermissions();

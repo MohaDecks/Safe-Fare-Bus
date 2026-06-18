@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safefare_mobile/main.dart';
 
 void main() {
-  testWidgets('SafeFare app loads', (tester) async {
+  testWidgets('App shows splash on launch', (tester) async {
     await tester.pumpWidget(const SafeFareApp());
-    expect(find.text('SafeFare'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 }

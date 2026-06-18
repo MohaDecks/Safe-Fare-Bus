@@ -1,30 +1,32 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'webview_platform_init.dart' if (dart.library.html) 'webview_platform_init_web.dart';
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/passenger/passenger_shell.dart';
 import 'screens/cashier/cashier_shell.dart';
-import 'screens/corporate/corporate_shell.dart';
 import 'config/api_config.dart';
 import 'services/api_service.dart';
 import 'models/user.dart';
+import 'models/branding.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  FlutterError.onError = (details) {
-    if (kDebugMode) {
-      FlutterError.dumpErrorToConsole(details);
-    }
-  };
-  runZonedGuarded(
-    () => runApp(const SafeFareApp()),
-    (error, stack) {
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+    initWebViewPlatform();
+    FlutterError.onError = (details) {
       if (kDebugMode) {
-        debugPrint('SafeFare crash: $error\n$stack');
+        FlutterError.dumpErrorToConsole(details);
       }
-    },
-  );
+    };
+    runApp(const SafeFareApp());
+  }, (error, stack) {
+    if (kDebugMode) {
+      debugPrint('SafeFare crash: $error\n$stack');
+    }
+  });
 }
 
 class SafeFareApp extends StatelessWidget {
@@ -33,7 +35,7 @@ class SafeFareApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SafeFare',
+      title: 'Dirshay Bus',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7C3AED)),
@@ -54,10 +56,11 @@ class SplashGate extends StatefulWidget {
 
 class _SplashGateState extends State<SplashGate> {
   final _api = ApiService();
-  bool _loading = true;
+  bool _splashDone = false;
   AppUser? _user;
   bool _needsRegistration = false;
   String? _bootMessage;
+  AppBranding _branding = AppBranding.fallback;
 
   @override
   void initState() {
@@ -66,15 +69,23 @@ class _SplashGateState extends State<SplashGate> {
   }
 
   Future<void> _boot() async {
+    final bootFuture = _runBoot();
+    final splashFuture = Future<void>.delayed(const Duration(milliseconds: 1800));
+    await Future.wait([bootFuture, splashFuture]);
+    if (mounted) setState(() => _splashDone = true);
+  }
+
+  Future<void> _runBoot() async {
     try {
       await _api.ping().timeout(const Duration(seconds: 8));
+      final branding = await _api.getBranding();
+      if (mounted) setState(() => _branding = branding);
       final token = await _api.getToken();
       if (token != null) {
         final me = await _api.getJson('/auth/me').timeout(const Duration(seconds: 10));
         final user = AppUser.fromJson(me);
         if (user.isCorporate) {
-          _user = user;
-          _needsRegistration = false;
+          await _api.logout();
         } else if (user.isCashier) {
           _user = user;
           _needsRegistration = false;
@@ -95,8 +106,6 @@ class _SplashGateState extends State<SplashGate> {
       await _api.logout();
       _bootMessage = 'Cannot connect to ${ApiConfig.baseUrl}. Hubi server-ka iyo internet.';
       if (kDebugMode) debugPrint('Boot error: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -109,14 +118,6 @@ class _SplashGateState extends State<SplashGate> {
   }
 
   void _onCashierVerified(AppUser user) {
-    setState(() {
-      _user = user;
-      _needsRegistration = false;
-      _bootMessage = null;
-    });
-  }
-
-  void _onCorporateVerified(AppUser user) {
     setState(() {
       _user = user;
       _needsRegistration = false;
@@ -143,34 +144,20 @@ class _SplashGateState extends State<SplashGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('SafeFare', style: TextStyle(color: Colors.black54)),
-            ],
-          ),
-        ),
-      );
+    if (!_splashDone) {
+      return SplashScreen(branding: _branding);
     }
     if (_user == null) {
       return LoginScreen(
         api: _api,
+        branding: _branding,
         onVerified: _onVerified,
         onCashierVerified: _onCashierVerified,
-        onCorporateVerified: _onCorporateVerified,
         bootMessage: _bootMessage,
       );
     }
     if (_needsRegistration) {
       return RegisterScreen(api: _api, onComplete: _onRegistrationDone);
-    }
-    if (_user!.isCorporate) {
-      return CorporateShell(user: _user!, api: _api, onLogout: _onLogout);
     }
     if (_user!.isCashier) {
       return CashierShell(user: _user!, api: _api, onLogout: _onLogout);

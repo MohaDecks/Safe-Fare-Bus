@@ -10,10 +10,10 @@ class PassengerHome extends StatefulWidget {
   const PassengerHome({super.key, required this.user, required this.api, required this.onLogout});
 
   @override
-  State<PassengerHome> createState() => _PassengerHomeState();
+  State<PassengerHome> createState() => PassengerHomeState();
 }
 
-class _PassengerHomeState extends State<PassengerHome> {
+class PassengerHomeState extends State<PassengerHome> {
   double _balance = 0;
   List<dynamic> _txs = [];
   bool _loading = true;
@@ -24,19 +24,30 @@ class _PassengerHomeState extends State<PassengerHome> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> refreshData({bool silent = false}) => _load(silent: silent);
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     try {
       final w = await widget.api.getJson('/wallet');
       final txs = await widget.api.getList('/wallet/transactions');
+      if (!mounted) return;
       setState(() {
         _balance = (w['balance_birr'] as num?)?.toDouble() ?? 0;
         _txs = txs;
       });
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted && !silent) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        if (!silent) {
+          setState(() => _loading = false);
+        } else if (_loading) {
+          setState(() => _loading = false);
+        }
+      }
     }
   }
 
@@ -46,32 +57,18 @@ class _PassengerHomeState extends State<PassengerHome> {
       appBar: AppBar(
         title: const Text('Wallet'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () => refreshData()),
           IconButton(icon: const Icon(Icons.logout), onPressed: widget.onLogout),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _load,
+              onRefresh: () => refreshData(),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text('Hi, ${widget.user.name}', style: Theme.of(context).textTheme.titleLarge),
-                  if (widget.user.paysViaCompany && (widget.user.corporateName?.isNotEmpty ?? false)) ...[
-                    const SizedBox(height: 8),
-                    Material(
-                      color: const Color(0xFFCCFBF1),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Text(
-                          'Company: ${widget.user.corporateName} — fare paid from company wallet',
-                          style: const TextStyle(color: Color(0xFF0F766E), fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 12),
                   Card(
                     color: const Color(0xFF1E3A8A),
@@ -80,11 +77,18 @@ class _PassengerHomeState extends State<PassengerHome> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const Text('Your wallet', style: TextStyle(color: Colors.white70)),
                           Text(
-                            widget.user.paysViaCompany ? 'Your wallet' : 'Balance',
-                            style: const TextStyle(color: Colors.white70),
+                            formatBirr(_balance),
+                            style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                           ),
-                          Text(formatBirr(_balance), style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Scan QR → fare deducted here',
+                              style: TextStyle(color: Colors.white60, fontSize: 12),
+                            ),
+                          ),
                         ],
                       ),
                     ),

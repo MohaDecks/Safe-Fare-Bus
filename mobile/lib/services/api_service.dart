@@ -3,13 +3,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import '../models/branding.dart';
 
 class ApiException implements Exception {
   final String message;
   final int? status;
-  ApiException(this.message, [this.status]);
+  final Map<String, dynamic>? data;
+
+  ApiException(this.message, [this.status, this.data]);
   @override
   String toString() => message;
+
+  bool get paidByCompany => data?['paid_by_company'] == true;
 }
 
 class ApiService {
@@ -87,11 +92,13 @@ class ApiService {
     }
     if (res.statusCode >= 400) {
       String msg = 'Request failed';
+      Map<String, dynamic>? data;
       try {
         final j = jsonDecode(res.body) as Map<String, dynamic>;
         msg = j['detail']?.toString() ?? msg;
+        data = j;
       } catch (_) {}
-      throw ApiException(msg, res.statusCode);
+      throw ApiException(msg, res.statusCode, data);
     }
     return res;
   }
@@ -141,16 +148,12 @@ class ApiService {
     return postJson('/auth/passenger/verify-otp', {'phone': phone, 'otp': otp}, auth: false);
   }
 
-  Future<Map<String, dynamic>> completePassengerRegistration(String name, String email) async {
-    return postJson('/auth/passenger/complete-registration', {'name': name, 'email': email});
+  Future<Map<String, dynamic>> completePassengerRegistration(String name) async {
+    return postJson('/auth/passenger/complete-registration', {'name': name});
   }
 
   Future<Map<String, dynamic>> cashierLogin(String email, String password) async {
     return postJson('/auth/mobile/cashier-login', {'email': email, 'password': password}, auth: false);
-  }
-
-  Future<Map<String, dynamic>> corporateLogin(String email, String password) async {
-    return postJson('/auth/mobile/corporate-login', {'email': email, 'password': password}, auth: false);
   }
 
   Future<void> delete(String path) async {
@@ -158,6 +161,16 @@ class ApiService {
   }
 
   Future<void> logout() => setToken(null);
+
+  /// Public branding — same source as admin portal sidebar logo.
+  Future<AppBranding> getBranding() async {
+    try {
+      final json = await getJson('/branding', auth: false);
+      return AppBranding.fromJson(json);
+    } catch (_) {
+      return AppBranding.fallback;
+    }
+  }
 }
 
 String formatBirr(num n) => 'ETB ${n.toStringAsFixed(2)}';

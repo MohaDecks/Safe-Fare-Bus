@@ -8,8 +8,8 @@ const roleSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     can_use_portal: { type: Boolean, default: false },
     can_use_mobile: { type: Boolean, default: false },
-    /** Portal landing: qr (cashier), employer, dashboard, none */
-    portal_home: { type: String, enum: ["qr", "employer", "dashboard", "none"], default: "dashboard" },
+    /** Portal landing: qr (cashier), dashboard, none */
+    portal_home: { type: String, enum: ["qr", "dashboard", "none"], default: "dashboard" },
     is_system: { type: Boolean, default: false },
     sort_order: { type: Number, default: 0 },
   },

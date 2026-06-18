@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../utils/payment_feedback.dart';
+import '../../widgets/payment_dialogs.dart';
 
 class PassengerScan extends StatefulWidget {
   final ApiService api;
+  final AppUser user;
+  final VoidCallback? onWalletChanged;
 
-  const PassengerScan({super.key, required this.api});
+  const PassengerScan({super.key, required this.api, required this.user, this.onWalletChanged});
 
   @override
   State<PassengerScan> createState() => _PassengerScanState();
@@ -14,86 +19,126 @@ class PassengerScan extends StatefulWidget {
 class _PassengerScanState extends State<PassengerScan> {
   final _manual = TextEditingController();
   bool _loading = false;
-  Map<String, dynamic>? _result;
+  bool _scanLocked = false;
   bool _useCamera = true;
 
+  @override
+  void dispose() {
+    _manual.dispose();
+    super.dispose();
+  }
+
   Future<void> _pay(String token) async {
-    if (token.isEmpty) return;
+    final code = token.trim();
+    if (code.isEmpty || _loading || _scanLocked) return;
     setState(() {
       _loading = true;
-      _result = null;
+      _scanLocked = true;
     });
     try {
-      final res = await widget.api.postJson('/passenger/pay', {'qr_token': token.trim()});
-      setState(() => _result = res);
+      final res = await widget.api.postJson('/passenger/pay', {'qr_token': code});
+      if (!mounted) return;
+      widget.onWalletChanged?.call();
+      await PaymentFeedback.playSuccess();
+      if (!mounted) return;
+      await showPaymentSuccessDialog(
+        context,
+        fareBirr: (res['fare_birr'] as num?) ?? 0,
+        routeName: res['route_name']?.toString() ?? '',
+        busPlate: res['bus_plate']?.toString() ?? '',
+        balanceBirr: (res['balance_birr'] as num?) ?? 0,
+      );
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (!mounted) return;
+      await PaymentFeedback.playError();
+      if (!mounted) return;
+      if (isInsufficientBalanceError(e.message, data: e.data)) {
+        await showInsufficientBalanceDialog(
+          context,
+          message: e.message,
+          linkedToCompany: widget.user.paysViaCompany,
+          corporateName: widget.user.corporateName,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _scanLocked = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_result != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Payment success')),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 64),
-              const SizedBox(height: 12),
-              Text('Paid ${formatBirr((_result!['fare_birr'] as num?) ?? 0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text('${_result!['route_name']} · ${_result!['bus_plate']}'),
-              Text('Balance: ${formatBirr((_result!['balance_birr'] as num?) ?? 0)}'),
-              const SizedBox(height: 24),
-              FilledButton(onPressed: () => setState(() => _result = null), child: const Text('Pay again')),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(title: const Text('Pay fare')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: true, label: Text('Scan QR')),
-                    ButtonSegment(value: false, label: Text('Manual code')),
-                  ],
-                  selected: {_useCamera},
-                  onSelectionChanged: (s) => setState(() => _useCamera = s.first),
-                ),
-                const SizedBox(height: 16),
-                if (_useCamera)
-                  SizedBox(
-                    height: 280,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: MobileScanner(
-                        onDetect: (capture) {
-                          final code = capture.barcodes.firstOrNull?.rawValue;
-                          if (code != null && !_loading) _pay(code);
-                        },
-                      ),
-                    ),
-                  )
-                else ...[
-                  TextField(
-                    controller: _manual,
-                    decoration: const InputDecoration(labelText: 'QR token', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(onPressed: () => _pay(_manual.text), child: const Text('Pay')),
+      body: Stack(
+        children: [
+          ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Scan QR'), icon: Icon(Icons.qr_code_scanner)),
+                  ButtonSegment(value: false, label: Text('Manual code'), icon: Icon(Icons.edit)),
                 ],
+                selected: {_useCamera},
+                onSelectionChanged: (s) => setState(() => _useCamera = s.first),
+              ),
+              const SizedBox(height: 16),
+              if (_useCamera)
+                SizedBox(
+                  height: 320,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: MobileScanner(
+                      onDetect: (capture) {
+                        final code = capture.barcodes.firstOrNull?.rawValue;
+                        if (code != null && !_loading && !_scanLocked) _pay(code);
+                      },
+                    ),
+                  ),
+                )
+              else ...[
+                const Text(
+                  'Enter the code shown on the bus QR screen.',
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _manual,
+                  textCapitalization: TextCapitalization.none,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'QR token',
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: _loading ? null : _pay,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _loading ? null : () => _pay(_manual.text),
+                    icon: const Icon(Icons.payment),
+                    label: const Text('Pay'),
+                  ),
+                ),
               ],
+            ],
+          ),
+          if (_loading)
+            Container(
+              color: Colors.black26,
+              child: const Center(child: CircularProgressIndicator()),
             ),
+        ],
+      ),
     );
   }
 }

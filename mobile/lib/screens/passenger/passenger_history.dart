@@ -8,10 +8,10 @@ class PassengerHistory extends StatefulWidget {
   const PassengerHistory({super.key, required this.api});
 
   @override
-  State<PassengerHistory> createState() => _PassengerHistoryState();
+  State<PassengerHistory> createState() => PassengerHistoryState();
 }
 
-class _PassengerHistoryState extends State<PassengerHistory> {
+class PassengerHistoryState extends State<PassengerHistory> {
   List<dynamic> _trips = [];
   List<dynamic> _all = [];
   bool _loading = true;
@@ -23,19 +23,30 @@ class _PassengerHistoryState extends State<PassengerHistory> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> refreshData({bool silent = false}) => _load(silent: silent);
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     try {
       final trips = await widget.api.getList('/wallet/trip-history');
       final all = await widget.api.getList('/wallet/transactions');
+      if (!mounted) return;
       setState(() {
         _trips = trips;
         _all = all;
       });
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted && !silent) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        if (!silent) {
+          setState(() => _loading = false);
+        } else if (_loading) {
+          setState(() => _loading = false);
+        }
+      }
     }
   }
 
@@ -57,7 +68,7 @@ class _PassengerHistoryState extends State<PassengerHistory> {
         backgroundColor: const Color(0xFF5B21B6),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () => refreshData()),
         ],
       ),
       body: _loading
@@ -77,7 +88,7 @@ class _PassengerHistoryState extends State<PassengerHistory> {
                 ),
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: _load,
+                    onRefresh: () => refreshData(),
                     child: _tab == 0 ? _buildTrips() : _buildAll(),
                   ),
                 ),

@@ -56,13 +56,13 @@ export function showCorporateModal(reload, existing) {
   const isEdit = !!existing;
   openModal(
     isEdit ? "Edit corporate company" : "Register corporate company",
-    `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px">Company uses mobile app → <strong>Corporate</strong> with the email and password below.</p>
+    `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px">Company logs in at <strong>/admin/</strong> with the email and password below (web portal — not mobile app).</p>
      <div class="form-group"><label>Company name</label><input id="m-cname" value="${existing?.company_name || ""}" placeholder="ABC Transport PLC" /></div>
      <div class="form-group"><label>Contact person</label><input id="m-contact" value="${existing?.contact_name || ""}" placeholder="Manager name" /></div>
      <div class="form-group"><label>Login email</label><input id="m-cemail" type="email" value="${existing?.email || ""}" placeholder="company@email.com" /></div>
      <div class="form-group"><label>${isEdit ? "New password (leave blank to keep)" : "Password"}</label><input id="m-cpass" type="password" placeholder="Min 6 characters" /></div>
      <div class="form-group"><label>Phone (optional)</label><input id="m-cphone" value="${existing?.phone || ""}" placeholder="0912345678" /></div>
-     ${isEdit ? `<div class="form-group"><label><input type="checkbox" id="m-cactive" ${existing.active !== false ? "checked" : ""} /> Active — can login to app</label></div>` : ""}`,
+     ${isEdit ? `<div class="form-group"><label><input type="checkbox" id="m-cactive" ${existing.active !== false ? "checked" : ""} /> Active — can login to portal</label></div>` : ""}`,
     async () => {
       const body = {
         company_name: document.getElementById("m-cname").value.trim(),
@@ -80,7 +80,7 @@ export function showCorporateModal(reload, existing) {
         const res = await api("POST", "/admin/corporates", body);
         reload();
         await sfSuccess(
-          `Give them these login details:\n\nEmail: ${res.email}\nPassword: (what you entered)\n\nApp → Corporate login`,
+          `Give them these login details:\n\nURL: /admin/\nEmail: ${res.email}\nPassword: (what you entered)\n\nCompany tops up wallet from portal, then Customers → top up each employee.`,
           "Company registered"
         );
         return;
@@ -200,7 +200,7 @@ export function showAppServiceModal(existing, reload) {
   openModal(
     isEdit ? `Edit — ${existing.name}` : "Add app service",
     `<div class="form-group"><label>Service name</label><input id="m-name" value="${existing?.name || ""}" placeholder="APS / Airport Parking" /></div>
-     <div class="form-group"><label>Link URL</label><input id="m-link" value="${existing?.link_url || ""}" placeholder="http://parking.dirshay.com:8082/login" />
+     <div class="form-group"><label>Link URL</label><input id="m-link" value="${existing?.link_url || ""}" placeholder="http://localhost:8082" />
      <small style="color:var(--muted)">Full URL — opens in browser when user taps icon in app</small></div>
      <div class="form-group"><label>Icon image</label><input id="m-icon" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
      <small style="color:var(--muted)">PNG or JPG, max ~600KB${isEdit ? " — leave empty to keep current" : ""}</small></div>
@@ -373,42 +373,6 @@ export async function showCustomerOtpModal(customerId) {
      <p><strong>Sent:</strong> ${new Date(o.created_at).toLocaleString()}</p>`,
     null,
     true
-  );
-}
-
-export function showEmpStaffModal(reload) {
-  openModal(
-    "Register employee (passenger account)",
-    `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:14px">New employee gets mobile app login + wallet for bus fare. Email must not already be cashier/admin.</p>
-     <div class="form-group"><label>Full name</label><input id="m-name" placeholder="Employee name" /></div>
-     <div class="form-group"><label>Email</label><input id="m-email" type="email" placeholder="employee@company.com" /></div>
-     <div class="form-group"><label>Phone</label><input id="m-phone" placeholder="09xxxxxxxx" /></div>
-     <div class="form-group"><label>Password</label><input id="m-pass" type="password" placeholder="Staff123!" /></div>`,
-    async () => {
-      await api("POST", "/employer/staff", {
-        name: document.getElementById("m-name").value.trim(),
-        email: document.getElementById("m-email").value.trim(),
-        phone: document.getElementById("m-phone").value.trim(),
-        password: document.getElementById("m-pass").value || "Staff123!",
-      });
-      reload();
-    }
-  );
-}
-
-export function showAllocateModal(email, reload) {
-  openModal(
-    `Allocate to ${email}`,
-    `<div class="form-group"><label>Amount (ETB)</label><input id="m-amt" type="number" /></div>
-     <div class="form-group"><label>Note</label><input id="m-note" /></div>`,
-    async () => {
-      await api("POST", "/employer/allocate", {
-        staff_email: email,
-        amount_birr: parseFloat(document.getElementById("m-amt").value),
-        note: document.getElementById("m-note").value.trim() || undefined,
-      });
-      reload();
-    }
   );
 }
 
