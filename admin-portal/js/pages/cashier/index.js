@@ -6,7 +6,7 @@ export async function renderCashierView(header, content) {
   if (state.view === "dashboard" || state.view === "qr") {
     header.innerHTML =
       state.view === "qr"
-        ? `<div><h1>QR — Collect fare</h1><p>Passenger scans this code in the SafeFare mobile app</p></div>`
+        ? `<div><h1>QR — Collect fare</h1><p>Passenger scans this code in the Dirshay Bus mobile app</p></div>`
         : `<div><h1>Cashier dashboard</h1><p>Your bus and today&apos;s collections</p></div>`;
 
     let bus = null;
