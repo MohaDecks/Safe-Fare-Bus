@@ -1,0 +1,10 @@
+{
+  "name": "safefare",
+  "private": true,
+  "description": "SafeFare — backend API + admin portal",
+  "scripts": {
+    "install:all": "npm install --omit=dev --prefix backend",
+    "deploy": "bash deploy/reload-pm2.sh",
+    "update": "git pull && npm run install:all && npm run deploy"
+  }
+}
