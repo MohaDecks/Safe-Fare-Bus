@@ -4,8 +4,8 @@ import { clearToken } from "../core/auth.js";
 import { clearLastView } from "../core/viewState.js";
 import { roleLabel } from "../utils/format.js";
 import { can, getAdminNav, staffNav } from "../utils/permissions.js";
-import { isReportView, reloadView, showAuth, setActiveView } from "./navigation.js";
-import { renderAdminSidebar } from "../components/sidebar.js";
+import { isReportView, reloadView, showAuth, goToView, syncSidebarNav } from "./navigation.js";
+import { renderAdminSidebar, refreshReportsNavBlock } from "../components/sidebar.js";
 import { renderAdminView } from "../pages/admin/index.js";
 import { renderCashierView } from "../pages/cashier/index.js";
 import { renderCorporatePortalView } from "../pages/corporatePortal/index.js";
@@ -42,26 +42,25 @@ export function renderApp() {
 
   const navEl = document.getElementById("sidebar-nav");
   if (user.role === "admin") {
-    renderAdminSidebar(navEl, nav, renderApp);
+    renderAdminSidebar(navEl, nav);
     if (can("reports.view") && !state.reportMenu) {
       api("GET", "/admin/reports/menu", null, { silent: true })
         .then((menu) => {
           state.reportMenu = menu;
-          if (isReportView()) renderApp();
+          if (isReportView()) refreshReportsNavBlock();
         })
         .catch(() => {});
     }
   } else {
     nav.forEach((item) => {
       const btn = document.createElement("button");
-      btn.className = `nav-item ${state.view === item.id ? "active" : ""}`;
+      btn.dataset.view = item.id;
+      btn.className = "nav-item";
       btn.innerHTML = `<span class="nav-icon">${item.icon}</span><span>${item.label}</span>`;
-      btn.onclick = () => {
-        setActiveView(item.id);
-        renderApp();
-      };
+      btn.onclick = () => goToView(item.id);
       navEl.appendChild(btn);
     });
+    syncSidebarNav();
   }
 
   document.getElementById("logout-btn").onclick = () => {

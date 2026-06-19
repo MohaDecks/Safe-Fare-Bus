@@ -6,7 +6,7 @@ export async function renderCashierView(header, content) {
   if (state.view === "dashboard" || state.view === "qr") {
     header.innerHTML =
       state.view === "qr"
-        ? `<div><h1>QR — Collect fare</h1><p>Passenger scans this code in the Dirshay Bus mobile app</p></div>`
+        ? `<div><h1>QR — Collect fare</h1><p>Passenger scans this code in the Dirsha mobile app</p></div>`
         : `<div><h1>Cashier dashboard</h1><p>Your bus and today&apos;s collections</p></div>`;
 
     let bus = null;
@@ -23,7 +23,7 @@ export async function renderCashierView(header, content) {
     const qrSection =
       state.view === "qr"
         ? `<div class="card qr-card-main">
-        <div class="card-header" style="background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border:none">
+        <div class="card-header" style="background:linear-gradient(135deg,#8E050E,#B80611);color:#fff;border:none">
           <h2 style="color:#fff">Scan to pay — QR Code</h2>
           <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff">Admin assigned</span>
         </div>

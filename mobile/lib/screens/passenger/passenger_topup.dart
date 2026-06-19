@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/payment_feedback.dart';
 import '../../widgets/payment_dialogs.dart';
 
@@ -101,7 +102,7 @@ class PassengerTopUpState extends State<PassengerTopUp> {
       case 'coopay':
         return const Color(0xFF2E7D32);
       default:
-        return Colors.deepPurple;
+        return AppColors.primary;
     }
   }
 
@@ -275,11 +276,13 @@ class PassengerTopUpState extends State<PassengerTopUp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Top up'),
+        title: const Text('Top up wallet'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () => refreshData()),
+          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: () => refreshData()),
         ],
       ),
       body: Column(
@@ -287,32 +290,33 @@ class PassengerTopUpState extends State<PassengerTopUp> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            color: Theme.of(context).colorScheme.primaryContainer,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            color: AppColors.primary.withValues(alpha: 0.06),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'More payment options',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  'Add money to wallet',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _loadingProviders
-                      ? 'Loading from admin…'
+                      ? 'Loading payment providers…'
                       : _providers.isEmpty
-                          ? 'Dooro shirkad marka liiska soo baxo'
-                          : '${_providers.length} apps — dooro mid (radio)',
-                  style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
+                          ? 'Select a provider when list loads'
+                          : '${_providers.length} providers available',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
                 ),
               ],
             ),
           ),
           Expanded(
             child: RefreshIndicator(
+              color: AppColors.primary,
               onRefresh: () => refreshData(),
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 children: [
                   _buildProviderSection(),
                   const SizedBox(height: 24),

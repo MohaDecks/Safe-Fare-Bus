@@ -23,6 +23,11 @@ class _PassengerShellState extends State<PassengerShell> {
   final _historyKey = GlobalKey<PassengerHistoryState>();
   final _topUpKey = GlobalKey<PassengerTopUpState>();
 
+  void _selectTab(int index) {
+    if (index == _index) return;
+    setState(() => _index = index);
+  }
+
   void _refreshWalletData() {
     _homeKey.currentState?.refreshData(silent: true);
     _historyKey.currentState?.refreshData(silent: true);
@@ -31,7 +36,13 @@ class _PassengerShellState extends State<PassengerShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      PassengerHome(key: _homeKey, user: widget.user, api: widget.api, onLogout: widget.onLogout),
+      PassengerHome(
+        key: _homeKey,
+        user: widget.user,
+        api: widget.api,
+        onLogout: widget.onLogout,
+        onNavigate: _selectTab,
+      ),
       PassengerScan(api: widget.api, user: widget.user, onWalletChanged: _refreshWalletData),
       PassengerTopUp(key: _topUpKey, api: widget.api, onWalletChanged: _refreshWalletData),
       PassengerHistory(key: _historyKey, api: widget.api),
@@ -41,14 +52,48 @@ class _PassengerShellState extends State<PassengerShell> {
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Pay'),
-          NavigationDestination(icon: Icon(Icons.add_card), label: 'Top up'),
-          NavigationDestination(icon: Icon(Icons.history), label: 'Trips'),
+        onDestinationSelected: _selectTab,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: [
+          NavigationDestination(
+            icon: _NavIcon(icon: Icons.home_outlined, selected: _index == 0),
+            selectedIcon: _NavIcon(icon: Icons.home_rounded, selected: true),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: _NavIcon(icon: Icons.qr_code_scanner_outlined, selected: _index == 1),
+            selectedIcon: _NavIcon(icon: Icons.qr_code_scanner, selected: true),
+            label: 'Pay',
+          ),
+          NavigationDestination(
+            icon: _NavIcon(icon: Icons.account_balance_wallet_outlined, selected: _index == 2),
+            selectedIcon: _NavIcon(icon: Icons.account_balance_wallet, selected: true),
+            label: 'Top up',
+          ),
+          NavigationDestination(
+            icon: _NavIcon(icon: Icons.receipt_long_outlined, selected: _index == 3),
+            selectedIcon: _NavIcon(icon: Icons.receipt_long, selected: true),
+            label: 'Trips',
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final bool selected;
+
+  const _NavIcon({required this.icon, required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: selected ? 1.08 : 1,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutBack,
+      child: Icon(icon),
     );
   }
 }

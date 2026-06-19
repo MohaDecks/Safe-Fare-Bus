@@ -1,5 +1,5 @@
-name: safefare_mobile
-description: SafeFare customer app (phone + OTP)
+name: dirsha
+description: Dirsha — bus transport & wallet app
 publish_to: "none"
 version: 1.0.0+1
 
@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  google_fonts: ^6.2.1
   http: ^1.2.2
   shared_preferences: ^2.3.3
   qr_flutter: ^4.1.0
@@ -19,12 +20,33 @@ dependencies:
   web: ^1.1.1
   webview_flutter: ^4.10.0
   webview_flutter_web: ^0.2.3
+  flutter_native_splash: ^2.4.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/dirsha_logo.png
+  adaptive_icon_background: "#B80611"
+  adaptive_icon_foreground: assets/images/dirsha_logo.png
+  web:
+    generate: true
+    image_path: assets/images/dirsha_logo.png
+    background_color: "#B80611"
+    theme_color: "#B80611"
+
+flutter_native_splash:
+  color: "#B80611"
+  android_12:
+    color: "#B80611"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/sounds/
+    - assets/images/dirsha_logo.png

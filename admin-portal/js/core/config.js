@@ -2,8 +2,8 @@ export const API = `${window.location.origin}/api`;
 export const TOKEN_KEY = "sf_token";
 
 /** Default branding when admin has not uploaded a company logo */
-export const DEFAULT_LOGO = "assets/safefare-logo.png";
-export const DEFAULT_BRAND_NAME = "Dirshay Bus";
+export const DEFAULT_LOGO = "assets/dirsha_logo.png";
+export const DEFAULT_BRAND_NAME = "Dirsha";
 export const DEFAULT_TAGLINE = "Smart Bus Fare & Ticketing Platform";
 
 export const CASHIER_NAV = [
@@ -33,7 +33,7 @@ export const ADMIN_NAV_ALL = [
   { id: "permissions", icon: "🔐", label: "Permissions", perm: ["permissions.view"] },
 ];
 
-export const REPORT_NAV_ORDER = ["Rev", "Today", "Fleet", "Staff", "Cus"];
+export const REPORT_NAV_ORDER = ["Rev", "Today", "Fleet", "Staff", "Cus", "Corp"];
 
 export const REPORT_NAV_FALLBACK = [
   { id: "daily_revenue", label: "Daily — trip money collected", group: "Rev" },
@@ -48,4 +48,10 @@ export const REPORT_NAV_FALLBACK = [
   { id: "customers", label: "Customer registrations", group: "Cus" },
   { id: "topups", label: "Wallet top-ups", group: "Cus" },
   { id: "fare_search", label: "Search trips by phone", group: "Cus" },
+  { id: "corporate_companies", label: "Companies — list & wallet balance", group: "Corp" },
+  { id: "corporate_employees", label: "Employees — all companies", group: "Corp" },
+  { id: "corporate_wallet_topups", label: "Company wallet top-ups", group: "Corp" },
+  { id: "corporate_allocations", label: "Employee wallet allocations", group: "Corp" },
+  { id: "corporate_employee_fares", label: "Employee fare payments", group: "Corp" },
+  { id: "corporate_topup_requests", label: "Employee top-up requests", group: "Corp" },
 ];

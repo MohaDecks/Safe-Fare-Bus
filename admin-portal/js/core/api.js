@@ -23,7 +23,7 @@ export async function api(method, path, body, opts = {}) {
     try {
       res = await fetch(`${API}${path}`, fetchOpts);
     } catch (_) {
-      throw new Error("Server unreachable — check that Dirshay Bus backend is running, then try again.");
+      throw new Error("Server unreachable — check that Dirsha backend is running, then try again.");
     }
     const text = await res.text();
     let data = null;

@@ -65,7 +65,7 @@ export async function renderDashboard(content) {
       <div class="dash-hero">
         <div>
           <h2>${company.name || "Your company"}</h2>
-          <p>Dirshay Bus overview — last ${charts?.days || 14} days</p>
+          <p>Dirsha overview — last ${charts?.days || 14} days</p>
         </div>
         <div class="dash-hero-stats">
           <div class="dash-hero-stat"><label>Customers</label><strong>${s.total_customers ?? "—"}</strong></div>
@@ -113,7 +113,7 @@ export async function renderDashboard(content) {
             ${
               company.logo_url
                 ? `<img src="${company.logo_url}" alt="${company.name || "Company logo"}" class="company-branding-logo" />`
-                : `<img src="${DEFAULT_LOGO}" alt="Dirshay Bus logo" class="company-branding-logo" />`
+                : `<img src="${DEFAULT_LOGO}" alt="Dirsha logo" class="company-branding-logo" />`
             }
           </div>
           <div class="company-branding-actions">

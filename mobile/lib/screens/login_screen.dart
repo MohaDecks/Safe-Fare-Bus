@@ -1,14 +1,12 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/phone_input.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/service_hover_tile.dart';
-import '../models/branding.dart';
 import 'service_webview_screen.dart';
 
 enum LoginMode { passenger, cashier }
@@ -18,7 +16,6 @@ class LoginScreen extends StatefulWidget {
   final void Function(AppUser user, {required bool needsRegistration}) onVerified;
   final void Function(AppUser user) onCashierVerified;
   final String? bootMessage;
-  final AppBranding branding;
 
   const LoginScreen({
     super.key,
@@ -26,7 +23,6 @@ class LoginScreen extends StatefulWidget {
     required this.onVerified,
     required this.onCashierVerified,
     this.bootMessage,
-    this.branding = AppBranding.fallback,
   });
 
   @override
@@ -44,7 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool? _phoneExists;
   bool _otpSent = false;
   String? _phoneDisplay;
-  String? _generatedOtp;
   final _otpFocus = FocusNode();
   List<Map<String, dynamic>> _appServices = [];
   bool _loadingServices = true;
@@ -57,12 +52,21 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadAppServices();
   }
 
+  bool _isParkingService(Map<String, dynamic> s) {
+    final name = (s['name'] ?? '').toString().toLowerCase();
+    final slug = (s['slug'] ?? '').toString().toLowerCase();
+    return name.contains('parking') || slug.contains('parking');
+  }
+
   Future<void> _loadAppServices() async {
     try {
       final list = await widget.api.getList('/mobile/app-services', auth: false);
       if (!mounted) return;
       setState(() {
-        _appServices = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _appServices = list
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .where((s) => !_isParkingService(s))
+            .toList();
         _loadingServices = false;
       });
     } catch (_) {
@@ -116,7 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
       _error = null;
       _otp.clear();
-      _generatedOtp = null;
     });
     try {
       final check = await widget.api.checkPassengerPhone(phone);
@@ -125,7 +128,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await widget.api.sendPassengerOtp(phone);
       setState(() {
         _otpSent = true;
-        _generatedOtp = res['otp_in_app'] as String? ?? res['otp_debug'] as String?;
         _phoneExists = res['exists'] as bool? ?? _phoneExists;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -139,11 +141,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildOtpInput() {
+    final theme = Theme.of(context);
     const digitStyle = TextStyle(
-      fontFamily: 'monospace',
-      fontSize: 22,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF1E293B),
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      color: AppColors.text,
       fontFeatures: [FontFeature.tabularFigures()],
     );
     final code = _otp.text;
@@ -151,13 +153,19 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('OTP code', style: TextStyle(fontSize: 12, color: Colors.black54)),
-        const SizedBox(height: 8),
+        Text(
+          'Enter verification code',
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
         GestureDetector(
           onTap: () => _otpFocus.requestFocus(),
           child: SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 56,
             child: Stack(
               children: [
                 Row(
@@ -165,18 +173,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: List.generate(6, (i) {
                     final hasDigit = i < code.length;
                     final isActive = _otpFocus.hasFocus && i == code.length;
-                    return Container(
-                      width: 44,
-                      height: 52,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 46,
+                      height: 56,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
                         border: Border.all(
-                          color: isActive ? Colors.black45 : const Color(0xFFE2E8F0),
-                          width: isActive ? 1.5 : 1,
+                          color: isActive ? AppColors.primary : AppColors.border,
+                          width: isActive ? 2 : 1,
                         ),
+                        boxShadow: isActive ? AppShadows.card : null,
                       ),
                       child: Text(hasDigit ? code[i] : '', style: digitStyle),
                     );
@@ -203,20 +213,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-        if (_generatedOtp != null) ...[
-          const SizedBox(height: 10),
-          Center(
-            child: Text(
-              'Generated OTP: $_generatedOtp',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-                fontFamily: 'monospace',
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ],
+        const SizedBox(height: 8),
+        Text(
+          'We sent a 6-digit code to your phone',
+          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+        ),
       ],
     );
   }
@@ -268,7 +269,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _otpSent = false;
       _phoneExists = null;
       _otp.clear();
-      _generatedOtp = null;
     });
   }
 
@@ -280,58 +280,86 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  Widget _errorBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: AppColors.error, fontSize: 13, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isPassenger = _mode == LoginMode.passenger;
     final isCashier = _mode == LoginMode.cashier;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
+              constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  BrandLogo(branding: widget.branding, height: 96, maxWidth: 240),
+                  Center(child: LocalBrandLogo(size: 80)),
                   const SizedBox(height: 20),
+                  Text(
+                    'Welcome to Dirsha',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isPassenger
+                        ? 'Sign in with your phone number'
+                        : 'Staff cashier sign in',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 28),
                   SegmentedButton<LoginMode>(
                     showSelectedIcon: false,
-                    style: SegmentedButton.styleFrom(
-                      textStyle: const TextStyle(fontSize: 12),
-                      visualDensity: VisualDensity.compact,
-                    ),
                     segments: const [
-                      ButtonSegment(value: LoginMode.passenger, label: Text('Passenger')),
-                      ButtonSegment(value: LoginMode.cashier, label: Text('Cashier')),
+                      ButtonSegment(
+                        value: LoginMode.passenger,
+                        label: Text('Passenger'),
+                        icon: Icon(Icons.person_outline, size: 18),
+                      ),
+                      ButtonSegment(
+                        value: LoginMode.cashier,
+                        label: Text('Cashier'),
+                        icon: Icon(Icons.badge_outlined, size: 18),
+                      ),
                     ],
                     selected: {_mode},
                     onSelectionChanged: (s) => _onModeChange(s.first),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    isPassenger
-                        ? 'Lambarka → OTP → gal ama diiwaangeli'
-                        : 'Cashier login — email & password from admin',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.black54, height: 1.4),
-                  ),
                   if (widget.bootMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Material(
-                      color: const Color(0xFFFEE2E2),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          widget.bootMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    _errorBanner(widget.bootMessage!),
                   ],
                   const SizedBox(height: 24),
                   if (isPassenger) ...[
@@ -342,26 +370,55 @@ class _LoginScreenState extends State<LoginScreen> {
                         inputFormatters: PhoneInput.formatters,
                         maxLength: 10,
                         decoration: const InputDecoration(
-                          labelText: 'Phone number *',
+                          labelText: 'Phone number',
                           hintText: '0912345678',
                           helperText: '10 digits, starts with 0',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
+                          prefixIcon: Icon(Icons.phone_outlined),
                           counterText: '',
                         ),
                       ),
                     ] else ...[
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(_phoneDisplay ?? _phone.text, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(
-                          _phoneExists == true
-                              ? 'Account found — enter OTP to sign in'
-                              : 'New number — enter OTP, then register your name',
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        trailing: TextButton(onPressed: _loading ? null : _resetPhone, child: const Text('Change')),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(AppRadii.sm),
+                              ),
+                              child: const Icon(Icons.phone_android, color: AppColors.primary),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _phoneDisplay ?? _phone.text,
+                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  Text(
+                                    _phoneExists == true
+                                        ? 'Account found — enter OTP'
+                                        : 'New number — verify then register',
+                                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(onPressed: _loading ? null : _resetPhone, child: const Text('Change')),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 20),
                       _buildOtpInput(),
                     ],
                   ] else if (isCashier) ...[
@@ -370,56 +427,61 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email),
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: _password,
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: 'Password',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
+                        prefixIcon: Icon(Icons.lock_outline),
                       ),
                       onSubmitted: (_) => _loading ? null : _cashierLogin(),
                     ),
                   ],
                   if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(_error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    _errorBanner(_error!),
                   ],
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: _loading
-                          ? null
-                          : (isPassenger
-                              ? (_otpSent ? _verifyOtp : _checkPhoneAndSendOtp)
-                              : _cashierLogin),
-                      child: Text(
-                        _loading
-                            ? 'Please wait…'
-                            : (isPassenger
-                                ? (_otpSent ? 'Verify OTP' : 'Continue')
-                                : 'Cashier sign in'),
-                      ),
-                    ),
+                  const SizedBox(height: 28),
+                  FilledButton(
+                    onPressed: _loading
+                        ? null
+                        : (isPassenger
+                            ? (_otpSent ? _verifyOtp : _checkPhoneAndSendOtp)
+                            : _cashierLogin),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            isPassenger
+                                ? (_otpSent ? 'Verify & continue' : 'Send OTP')
+                                : 'Sign in',
+                          ),
                   ),
                   if (_loadingServices || _appServices.isNotEmpty) ...[
-                    const SizedBox(height: 28),
-                    const Divider(),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Services',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black54),
+                    const SizedBox(height: 36),
+                    Text(
+                      'More services',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMuted,
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     if (_loadingServices)
-                      const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)))
+                      const Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        ),
+                      )
                     else
                       Wrap(
                         spacing: 12,

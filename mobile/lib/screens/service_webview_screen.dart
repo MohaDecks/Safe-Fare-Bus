@@ -4,7 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../widgets/service_web_iframe_stub.dart'
     if (dart.library.html) '../widgets/service_web_iframe_web.dart';
 
-/// Opens an admin-linked service (APS, parking, …) inside SafeFare — no external browser.
+/// Opens an admin-linked service inside Dirsha — no external browser.
 class ServiceWebViewScreen extends StatefulWidget {
   final String title;
   final String url;

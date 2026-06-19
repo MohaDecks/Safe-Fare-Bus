@@ -5,7 +5,14 @@ import { reportIdFromView } from "../../shell/navigation.js";
 
 let lastReportData = null;
 
-const REPORTS_NO_DATE = new Set(["buses", "staff_summary", "today_trips", "today_registrations"]);
+const REPORTS_NO_DATE = new Set([
+  "buses",
+  "staff_summary",
+  "today_trips",
+  "today_registrations",
+  "corporate_companies",
+  "corporate_employees",
+]);
 
 const REPORT_COLUMN_LABELS = {
   period: "Period",
@@ -28,6 +35,15 @@ const REPORT_COLUMN_LABELS = {
   count: "Count",
   payment_app: "Payment app",
   balance_after: "Balance after",
+  company: "Company",
+  contact: "Contact",
+  balance: "Wallet (ETB)",
+  employees: "Employees",
+  status: "Status",
+  employee_name: "Employee",
+  registered: "Registered",
+  description: "Description",
+  note: "Note",
 };
 
 function defaultReportDateInputs(_reportId) {
@@ -38,7 +54,7 @@ function defaultReportDateInputs(_reportId) {
 function formatReportCell(key, val) {
   if (val == null || val === "") return "—";
   if (key === "date") return `<small>${new Date(val).toLocaleString()}</small>`;
-  if (key === "total_birr" || key === "amount_birr" || key === "fare_birr" || key === "balance_after")
+  if (key === "total_birr" || key === "amount_birr" || key === "fare_birr" || key === "balance_after" || key === "balance")
     return `<strong>${formatBirr(val)}</strong>`;
   if (key === "period" && /^\d{4}-\d{2}-\d{2}$/.test(String(val))) return String(val);
   return String(val);
@@ -56,6 +72,11 @@ function reportSummaryHtml(data, from, to, phone) {
     "bus_activity",
     "topups",
     "fare_search",
+    "corporate_companies",
+    "corporate_wallet_topups",
+    "corporate_allocations",
+    "corporate_employee_fares",
+    "corporate_topup_requests",
   ]);
   if (moneyReports.has(data.report)) {
     parts.push(`<span>Total: <strong>${formatBirr(s.total_birr)}</strong></span>`);
@@ -65,6 +86,9 @@ function reportSummaryHtml(data, from, to, phone) {
   }
   if (s.extra?.days != null) parts.push(`<span>Days with sales: <strong>${s.extra.days}</strong></span>`);
   if (s.extra?.buses != null) parts.push(`<span>Buses: <strong>${s.extra.buses}</strong></span>`);
+  if (s.extra?.pending != null) parts.push(`<span>Pending requests: <strong>${s.extra.pending}</strong></span>`);
+  if (s.extra?.registered != null) parts.push(`<span>Registered employees: <strong>${s.extra.registered}</strong></span>`);
+  if (s.extra?.employees != null) parts.push(`<span>Total employees: <strong>${s.extra.employees}</strong></span>`);
   if (s.extra?.with_cashier != null) parts.push(`<span>With cashier: <strong>${s.extra.with_cashier}</strong> / ${s.count}</span>`);
   if (s.extra?.by_role?.length) {
     parts.push(
@@ -111,8 +135,8 @@ export async function renderReports(content) {
             ${showDates ? `<div class="form-group"><label>From date</label><input type="date" id="r-from" value="${def.from}" /></div>
             <div class="form-group"><label>To date</label><input type="date" id="r-to" value="${def.to}" /></div>` : ""}
             <div class="form-group report-phone">
-              <label>Phone search</label>
-              <input type="text" id="r-phone" placeholder="09xx or partial digits" maxlength="15" />
+              <label>${reportId.startsWith("corporate_") ? "Phone / company search" : "Phone search"}</label>
+              <input type="text" id="r-phone" placeholder="09xx, company name…" maxlength="40" />
             </div>
             <div class="report-actions">
               <button type="button" class="btn btn-primary" id="run-report">Search</button>
@@ -163,7 +187,7 @@ function exportReportCsv() {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `safefare-report-${lastReportData.report || "data"}-${Date.now()}.csv`;
+  a.download = `dirsha-report-${lastReportData.report || "data"}-${Date.now()}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
 }

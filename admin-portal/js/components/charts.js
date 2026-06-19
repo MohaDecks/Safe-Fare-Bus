@@ -60,8 +60,8 @@ export function paintDashboardCharts(charts) {
   destroyDashboardCharts();
   renderDashboardChart("chart-revenue", "line", charts.labels, charts.revenue, {
     label: "Revenue (ETB)",
-    color: "#2563eb",
-    bg: "rgba(37, 99, 235, 0.12)",
+    color: "#B80611",
+    bg: "rgba(184, 6, 17, 0.12)",
   });
   renderDashboardChart("chart-customers", "bar", charts.labels, charts.customer_registrations, {
     label: "New customers",

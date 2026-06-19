@@ -1,6 +1,9 @@
 const User = require("../models/User");
 const Bus = require("../models/Bus");
 const Transaction = require("../models/Transaction");
+const Wallet = require("../models/Wallet");
+const CorporateEmployee = require("../models/CorporateEmployee");
+const CorporateTopUpRequest = require("../models/CorporateTopUpRequest");
 const {
   parseDateRange,
   phoneDigitsForSearch,
@@ -115,11 +118,31 @@ const REPORT_DEFINITIONS = [
   { id: "customers", label: "Customer registrations", group: "Cus" },
   { id: "topups", label: "Wallet top-ups", group: "Cus" },
   { id: "fare_search", label: "Search trips by phone", group: "Cus" },
+  { id: "corporate_companies", label: "Companies — list & wallet balance", group: "Corp" },
+  { id: "corporate_employees", label: "Employees — all companies", group: "Corp" },
+  { id: "corporate_wallet_topups", label: "Company wallet top-ups", group: "Corp" },
+  { id: "corporate_allocations", label: "Employee wallet allocations", group: "Corp" },
+  { id: "corporate_employee_fares", label: "Employee fare payments", group: "Corp" },
+  { id: "corporate_topup_requests", label: "Employee top-up requests", group: "Corp" },
 ];
+
+async function corporatesForCompany(companyId) {
+  return User.find({ company_id: companyId, role: "corporate" }).sort({ createdAt: -1 });
+}
+
+async function corporateMap(companyId) {
+  const corps = await corporatesForCompany(companyId);
+  const map = {};
+  for (const c of corps) {
+    map[c._id.toString()] = c.corporate_name || c.name || "—";
+  }
+  return { corps, map, ids: corps.map((c) => c._id) };
+}
 
 async function runReport(companyId, reportId, query) {
   let { from, to } = parseDateRange(query);
-  if (!from && !to && !["buses", "staff_summary", "today_trips", "today_registrations"].includes(reportId)) {
+  const noDateDefaults = ["buses", "staff_summary", "today_trips", "today_registrations", "corporate_companies", "corporate_employees"];
+  if (!from && !to && !noDateDefaults.includes(reportId)) {
     const def = defaultDateRange(1);
     from = def.from;
     to = def.to;
@@ -128,7 +151,7 @@ async function runReport(companyId, reportId, query) {
   const limit = Math.min(500, Math.max(1, parseInt(query.limit, 10) || 200));
   const passengerFilter = await passengerIdsByPhone(companyId, phoneQ);
 
-  if (phoneQ && passengerFilter && !passengerFilter.length && reportId !== "buses" && reportId !== "staff_summary") {
+  if (phoneQ && passengerFilter && !passengerFilter.length && reportId !== "buses" && reportId !== "staff_summary" && !reportId.startsWith("corporate_")) {
     return emptyResponse(reportId, from, to, phoneQ);
   }
 
@@ -157,6 +180,18 @@ async function runReport(companyId, reportId, query) {
       return topupsReport(companyId, from, to, passengerFilter, phoneQ, limit);
     case "fare_search":
       return fareSearch(companyId, from, to, passengerFilter, phoneQ, limit);
+    case "corporate_companies":
+      return corporateCompaniesReport(companyId, phoneQ);
+    case "corporate_employees":
+      return corporateEmployeesReport(companyId, phoneQ, limit);
+    case "corporate_wallet_topups":
+      return corporateWalletTopupsReport(companyId, from, to, phoneQ, limit);
+    case "corporate_allocations":
+      return corporateAllocationsReport(companyId, from, to, phoneQ, limit);
+    case "corporate_employee_fares":
+      return corporateEmployeeFaresReport(companyId, from, to, phoneQ, limit);
+    case "corporate_topup_requests":
+      return corporateTopupRequestsReport(companyId, from, to, phoneQ, limit);
     default:
       return dailyRevenue(companyId, from, to, passengerFilter, phoneQ);
   }
@@ -425,6 +460,245 @@ async function topupsReport(companyId, from, to, passengerFilter, phone, limit) 
 
 async function fareSearch(companyId, from, to, passengerFilter, phone, limit) {
   return dailyTripsDetail(companyId, from, to, passengerFilter, phone, limit);
+}
+
+function phoneMatches(value, query) {
+  if (!query) return true;
+  const digits = phoneDigitsForSearch(query);
+  if (!digits) return true;
+  return String(value || "").replace(/\D/g, "").includes(digits);
+}
+
+async function corporateCompaniesReport(companyId, phoneQ) {
+  const { corps, ids } = await corporateMap(companyId);
+  const empCounts = await CorporateEmployee.aggregate([
+    { $match: { corporate_user_id: { $in: ids } } },
+    { $group: { _id: "$corporate_user_id", count: { $sum: 1 } } },
+  ]);
+  const empMap = Object.fromEntries(empCounts.map((e) => [e._id.toString(), e.count]));
+  const wallets = await Wallet.find({ user_id: { $in: ids } });
+  const balMap = Object.fromEntries(wallets.map((w) => [w.user_id.toString(), w.balance_birr]));
+
+  let rows = corps.map((c) => ({
+    company: c.corporate_name || c.name,
+    contact: c.name,
+    email: c.email || "—",
+    phone: formatPhoneDisplay(c.phone) || c.phone || "—",
+    balance: Math.round((balMap[c._id.toString()] || 0) * 100) / 100,
+    employees: empMap[c._id.toString()] || 0,
+    status: c.active === false ? "Inactive" : "Active",
+    date: c.createdAt,
+  }));
+
+  if (phoneQ) {
+    rows = rows.filter((r) => phoneMatches(r.phone, phoneQ) || r.company.toLowerCase().includes(phoneQ.toLowerCase()));
+  }
+
+  const totalBalance = rows.reduce((s, r) => s + r.balance, 0);
+  return wrap(
+    "corporate_companies",
+    "Corporate companies",
+    { phone: phoneQ },
+    { count: rows.length, total_birr: totalBalance, extra: { employees: rows.reduce((s, r) => s + r.employees, 0) } },
+    rows,
+    ["company", "contact", "email", "phone", "balance", "employees", "status", "date"]
+  );
+}
+
+async function corporateEmployeesReport(companyId, phoneQ, limit) {
+  const { map, ids } = await corporateMap(companyId);
+  if (!ids.length) return emptyResponse("corporate_employees", null, null, phoneQ);
+
+  const invites = await CorporateEmployee.find({ corporate_user_id: { $in: ids } }).sort({ createdAt: -1 }).limit(limit);
+  const phones = invites.map((i) => i.phone);
+  const passengers = await User.find({ company_id: companyId, role: "passenger", phone: { $in: phones } }).select(
+    "phone name sponsored_by"
+  );
+  const pByPhone = Object.fromEntries(passengers.map((p) => [p.phone, p]));
+
+  let rows = invites.map((inv) => {
+    const p = pByPhone[inv.phone];
+    return {
+      company: map[inv.corporate_user_id.toString()] || "—",
+      employee_name: inv.name || p?.name || "—",
+      phone: formatPhoneDisplay(inv.phone),
+      registered: p ? "Yes" : "Waiting",
+      date: inv.createdAt,
+    };
+  });
+
+  if (phoneQ) {
+    rows = rows.filter((r) => phoneMatches(r.phone, phoneQ) || r.company.toLowerCase().includes(phoneQ.toLowerCase()));
+  }
+
+  return wrap(
+    "corporate_employees",
+    "Corporate employees",
+    { phone: phoneQ },
+    { count: rows.length, total_birr: 0, extra: { registered: rows.filter((r) => r.registered === "Yes").length } },
+    rows,
+    ["company", "employee_name", "phone", "registered", "date"]
+  );
+}
+
+async function corporateWalletTopupsReport(companyId, from, to, phoneQ, limit) {
+  const { map, ids } = await corporateMap(companyId);
+  if (!ids.length) return emptyResponse("corporate_wallet_topups", from, to, phoneQ);
+
+  const q = { type: "topup", user_id: { $in: ids } };
+  if (from || to) {
+    q.createdAt = {};
+    if (from) q.createdAt.$gte = from;
+    if (to) q.createdAt.$lte = to;
+  }
+  const txs = await Transaction.find(q).sort({ createdAt: -1 }).limit(limit);
+  let rows = txs.map((t) => ({
+    date: t.createdAt,
+    company: map[t.user_id.toString()] || "—",
+    amount_birr: t.amount_birr,
+    balance_after: t.balance_after_birr,
+    description: t.description || "—",
+  }));
+
+  if (phoneQ) rows = rows.filter((r) => r.company.toLowerCase().includes(phoneQ.toLowerCase()));
+
+  const total_birr = rows.reduce((s, r) => s + r.amount_birr, 0);
+  return wrap(
+    "corporate_wallet_topups",
+    "Corporate company wallet top-ups",
+    { date_from: from, date_to: to, phone: phoneQ },
+    { count: rows.length, total_birr },
+    rows,
+    ["date", "company", "amount_birr", "balance_after", "description"]
+  );
+}
+
+async function corporateAllocationsReport(companyId, from, to, phoneQ, limit) {
+  const { map, ids } = await corporateMap(companyId);
+  if (!ids.length) return emptyResponse("corporate_allocations", from, to, phoneQ);
+
+  const q = { type: "allocate", paid_by_corporate_id: { $in: ids } };
+  if (from || to) {
+    q.createdAt = {};
+    if (from) q.createdAt.$gte = from;
+    if (to) q.createdAt.$lte = to;
+  }
+  const txs = await Transaction.find(q).sort({ createdAt: -1 }).limit(limit).populate("user_id", "name phone");
+  let rows = txs.map((t) => ({
+    date: t.createdAt,
+    company: map[t.paid_by_corporate_id?.toString()] || "—",
+    employee_name: t.user_id?.name || "—",
+    phone: formatPhoneDisplay(t.user_id?.phone),
+    amount_birr: t.amount_birr,
+    balance_after: t.balance_after_birr,
+    description: t.description || "—",
+  }));
+
+  if (phoneQ) {
+    rows = rows.filter((r) => phoneMatches(r.phone, phoneQ) || r.company.toLowerCase().includes(phoneQ.toLowerCase()));
+  }
+
+  const total_birr = rows.reduce((s, r) => s + r.amount_birr, 0);
+  return wrap(
+    "corporate_allocations",
+    "Corporate employee wallet allocations",
+    { date_from: from, date_to: to, phone: phoneQ },
+    { count: rows.length, total_birr },
+    rows,
+    ["date", "company", "employee_name", "phone", "amount_birr", "balance_after", "description"]
+  );
+}
+
+async function corporateEmployeeFaresReport(companyId, from, to, phoneQ, limit) {
+  const { map, ids } = await corporateMap(companyId);
+  if (!ids.length) return emptyResponse("corporate_employee_fares", from, to, phoneQ);
+
+  const sponsored = await User.find({ company_id: companyId, role: "passenger", sponsored_by: { $in: ids } }).select(
+    "_id name phone sponsored_by"
+  );
+  const passengerIds = sponsored.map((p) => p._id);
+  if (!passengerIds.length) return emptyResponse("corporate_employee_fares", from, to, phoneQ);
+
+  const pMap = Object.fromEntries(sponsored.map((p) => [p._id.toString(), p]));
+  const q = { type: "fare", user_id: { $in: passengerIds } };
+  if (from || to) {
+    q.createdAt = {};
+    if (from) q.createdAt.$gte = from;
+    if (to) q.createdAt.$lte = to;
+  }
+  const { busMap } = await companyBusContext(companyId);
+  const txs = await Transaction.find(q).sort({ createdAt: -1 }).limit(limit);
+  let rows = txs.map((t) => {
+    const p = pMap[t.user_id?.toString()];
+    const bus = busMap[t.bus_id?.toString()] || {};
+    return {
+      date: t.createdAt,
+      company: map[p?.sponsored_by?.toString()] || "—",
+      employee_name: p?.name || "—",
+      phone: formatPhoneDisplay(p?.phone),
+      bus: bus.plate || "—",
+      route: bus.route_name || t.description || "—",
+      amount_birr: t.amount_birr,
+    };
+  });
+
+  if (phoneQ) {
+    rows = rows.filter((r) => phoneMatches(r.phone, phoneQ) || r.company.toLowerCase().includes(phoneQ.toLowerCase()));
+  }
+
+  const total_birr = rows.reduce((s, r) => s + r.amount_birr, 0);
+  return wrap(
+    "corporate_employee_fares",
+    "Corporate employee fare payments",
+    { date_from: from, date_to: to, phone: phoneQ },
+    { count: rows.length, total_birr },
+    rows,
+    ["date", "company", "employee_name", "phone", "bus", "route", "amount_birr"]
+  );
+}
+
+async function corporateTopupRequestsReport(companyId, from, to, phoneQ, limit) {
+  const { map, ids } = await corporateMap(companyId);
+  if (!ids.length) return emptyResponse("corporate_topup_requests", from, to, phoneQ);
+
+  const q = { corporate_user_id: { $in: ids } };
+  if (from || to) {
+    q.createdAt = {};
+    if (from) q.createdAt.$gte = from;
+    if (to) q.createdAt.$lte = to;
+  }
+  const rowsRaw = await CorporateTopUpRequest.find(q).sort({ createdAt: -1 }).limit(limit);
+  const passengerIds = [...new Set(rowsRaw.map((r) => r.passenger_user_id.toString()))];
+  const passengers = await User.find({ _id: { $in: passengerIds } }).select("name phone");
+  const pMap = Object.fromEntries(passengers.map((p) => [p._id.toString(), p]));
+
+  let rows = rowsRaw.map((r) => {
+    const p = pMap[r.passenger_user_id.toString()];
+    return {
+      date: r.createdAt,
+      company: map[r.corporate_user_id.toString()] || "—",
+      employee_name: p?.name || "—",
+      phone: formatPhoneDisplay(p?.phone),
+      amount_birr: r.amount_birr,
+      status: r.status,
+      note: r.note || r.rejection_reason || "—",
+    };
+  });
+
+  if (phoneQ) {
+    rows = rows.filter((r) => phoneMatches(r.phone, phoneQ) || r.company.toLowerCase().includes(phoneQ.toLowerCase()));
+  }
+
+  const total_birr = rows.reduce((s, r) => s + r.amount_birr, 0);
+  const pending = rows.filter((r) => r.status === "pending").length;
+  return wrap(
+    "corporate_topup_requests",
+    "Corporate employee top-up requests",
+    { date_from: from, date_to: to, phone: phoneQ },
+    { count: rows.length, total_birr, extra: { pending } },
+    rows,
+    ["date", "company", "employee_name", "phone", "amount_birr", "status", "note"]
+  );
 }
 
 function mapFareRow(t, busMap) {

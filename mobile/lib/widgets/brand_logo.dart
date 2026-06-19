@@ -1,51 +1,68 @@
 import 'package:flutter/material.dart';
-import '../config/api_config.dart';
-import '../models/branding.dart';
+import '../theme/app_theme.dart';
 
-/// Company logo from admin portal (database) — no hardcoded app name text.
-class BrandLogo extends StatelessWidget {
-  final AppBranding branding;
-  final double height;
-  final double maxWidth;
+/// Dirsha logo with text (`img/last.png` → assets).
+const kBrandLogoAsset = 'assets/images/dirsha_logo.png';
 
-  const BrandLogo({
-    super.key,
-    required this.branding,
-    this.height = 88,
-    this.maxWidth = 220,
-  });
+/// Circular logo — image fills the circle (one red color, white DIRSHA text visible).
+class CircularBrandLogo extends StatelessWidget {
+  final double size;
 
-  String get _logoUrl {
-    final url = branding.logoUrl;
-    if (url.isEmpty) return '';
-    if (url.startsWith('http')) return url;
-    return '${ApiConfig.baseUrl}$url';
-  }
+  const CircularBrandLogo({super.key, this.size = 200});
 
   @override
   Widget build(BuildContext context) {
-    final url = _logoUrl;
-    if (url.isNotEmpty) {
-      return Image.network(
-        url,
-        height: height,
-        width: maxWidth,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => _fallbackIcon(height),
-      );
-    }
-    return _fallbackIcon(height);
-  }
-
-  Widget _fallbackIcon(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: const Color(0xFF7C3AED),
-        borderRadius: BorderRadius.circular(size * 0.22),
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Image.asset(
+          kBrandLogoAsset,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => _fallback(size),
+        ),
       ),
-      child: Icon(Icons.directions_bus, color: Colors.white, size: size * 0.52),
     );
   }
+
+  Widget _fallback(double size) {
+    return ColoredBox(
+      color: AppColors.primary,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.directions_bus, size: size * 0.28, color: Colors.white),
+          SizedBox(height: size * 0.04),
+          Text(
+            'DIRSHA',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
+              fontSize: size * 0.1,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Login / register header.
+class LocalBrandLogo extends StatelessWidget {
+  final double size;
+
+  const LocalBrandLogo({super.key, this.size = 80});
+
+  @override
+  Widget build(BuildContext context) {
+    return CircularBrandLogo(size: size);
+  }
+}
+
+/// Preload logo asset during splash.
+Future<void> precacheLocalBrandLogo(BuildContext context) {
+  return precacheImage(const AssetImage(kBrandLogoAsset), context);
 }

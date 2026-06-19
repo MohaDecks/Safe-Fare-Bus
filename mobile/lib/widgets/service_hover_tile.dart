@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class ServiceHoverTile extends StatefulWidget {
   final String name;
@@ -35,62 +36,48 @@ class _ServiceHoverTileState extends State<ServiceHoverTile> {
           curve: Curves.easeOutCubic,
           width: 88,
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateX(_hovered ? -0.08 : 0),
-            child: Transform.translate(
-              offset: Offset(0, _hovered ? -8 : 0),
-              child: Transform.scale(
-                scale: _hovered ? 1.07 : 1,
-                child: Column(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      width: 64,
-                      height: 64,
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: _hovered ? const Color(0xFF7C3AED) : const Color(0xFFE2E8F0),
-                          width: _hovered ? 1.5 : 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _hovered
-                                ? const Color(0xFF7C3AED).withValues(alpha: 0.28)
-                                : Colors.black.withValues(alpha: 0.08),
-                            blurRadius: _hovered ? 18 : 6,
-                            offset: Offset(0, _hovered ? 10 : 3),
-                          ),
-                        ],
+          child: Transform.translate(
+            offset: Offset(0, _hovered ? -4 : 0),
+            child: Transform.scale(
+              scale: _hovered ? 1.05 : 1,
+              child: Column(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    width: 64,
+                    height: 64,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                      border: Border.all(
+                        color: _hovered ? AppColors.primary : AppColors.border,
+                        width: _hovered ? 1.5 : 1,
                       ),
-                      child: widget.iconUrl.isNotEmpty
-                          ? Image.network(
-                              widget.iconUrl,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => _initials(initials),
-                            )
-                          : _initials(initials),
+                      boxShadow: _hovered ? AppShadows.card : null,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.name,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: _hovered ? FontWeight.w700 : FontWeight.w500,
-                        color: _hovered ? const Color(0xFF5B21B6) : Colors.black87,
-                      ),
+                    child: widget.iconUrl.isNotEmpty
+                        ? Image.network(
+                            widget.iconUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => _initials(initials),
+                          )
+                        : _initials(initials),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: _hovered ? FontWeight.w700 : FontWeight.w500,
+                      color: _hovered ? AppColors.primary : AppColors.text,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -103,7 +90,7 @@ class _ServiceHoverTileState extends State<ServiceHoverTile> {
     return Center(
       child: Text(
         text,
-        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)),
+        style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
       ),
     );
   }
