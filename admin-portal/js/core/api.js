@@ -33,7 +33,11 @@ export async function api(method, path, body, opts = {}) {
       } catch (_) {}
     }
     if (!res.ok) {
-      const err = new Error(data?.detail || "Request failed");
+      let msg = data?.detail || data?.message;
+      if (!msg && res.status === 413) msg = "Upload too large — use a smaller icon (max 600KB)";
+      if (!msg && res.status === 403) msg = "You do not have permission for this action";
+      if (!msg && res.status >= 500) msg = `Server error (${res.status}) — try again or use a smaller icon`;
+      const err = new Error(msg || `Request failed (${res.status})`);
       err.status = res.status;
       throw err;
     }

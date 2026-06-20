@@ -36,7 +36,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
 
 app.use(corsMiddleware());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use("/uploads", express.static(pathUploads, { redirect: false }));
 
 app.get("/", (_req, res) => {
@@ -107,6 +107,19 @@ app.get(["/admin", "/admin/"], (_req, res) => {
   res.sendFile(path.join(adminPortalPath, "index.html"));
 });
 app.use("/admin", express.static(adminPortalPath, { redirect: false }));
+
+app.use((err, req, res, next) => {
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ detail: "Upload too large — use a smaller image (max 600KB)" });
+  }
+  if (err?.code === 11000) {
+    return res.status(400).json({ detail: "Duplicate name — another service already uses this name" });
+  }
+  console.error(err);
+  if (!res.headersSent) {
+    res.status(500).json({ detail: err.message || "Server error" });
+  }
+});
 
 async function main() {
   await connectDb();

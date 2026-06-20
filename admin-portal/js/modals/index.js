@@ -1,16 +1,8 @@
 import { openModal } from "../components/modal.js";
 import { api } from "../core/api.js";
 import { formatBirr } from "../utils/format.js";
+import { prepareIconUpload } from "../utils/imageUpload.js";
 import { sfWarning, sfSuccess } from "../components/dialog.js";
-
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(new Error("Could not read file"));
-    r.readAsDataURL(file);
-  });
-}
 
 export function showGenerateQrModal(buses, reload) {
   const withCashier = buses.filter((b) => b.cashier_id);
@@ -182,7 +174,7 @@ export function showPaymentProviderModal(existing, reload) {
         sort_order: parseInt(document.getElementById("m-order").value, 10) || 0,
       };
       const file = document.getElementById("m-logo").files?.[0];
-      if (file) body.logo_base64 = await readFileAsDataUrl(file);
+      if (file) body.logo_base64 = await prepareIconUpload(file);
       else if (!isEdit) throw new Error("Upload a logo image");
 
       if (isEdit) {
@@ -218,7 +210,7 @@ export function showAppServiceModal(existing, reload) {
         sort_order: parseInt(document.getElementById("m-order").value, 10) || 0,
       };
       const file = document.getElementById("m-icon").files?.[0];
-      if (file) body.icon_base64 = await readFileAsDataUrl(file);
+      if (file) body.icon_base64 = await prepareIconUpload(file);
       else if (!isEdit) throw new Error("Upload an icon image");
 
       if (isEdit) {

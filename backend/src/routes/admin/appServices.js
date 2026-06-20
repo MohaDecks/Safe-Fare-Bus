@@ -64,8 +64,16 @@ router.patch("/:id", requirePermission("appservices.update"), async (req, res) =
 
   const { name, link_url, active, sort_order, icon_base64 } = req.body || {};
   if (name?.trim()) {
-    doc.name = name.trim();
-    doc.slug = slugify(name);
+    const newName = name.trim();
+    const newSlug = slugify(newName);
+    const conflict = await AppService.findOne({
+      company_id: req.user.company_id,
+      slug: newSlug,
+      _id: { $ne: doc._id },
+    });
+    if (conflict) return res.status(400).json({ detail: "Another service already uses this name" });
+    doc.name = newName;
+    doc.slug = newSlug;
   }
   if (link_url !== undefined) {
     const link = normalizeUrl(link_url);
@@ -87,7 +95,12 @@ router.patch("/:id", requirePermission("appservices.update"), async (req, res) =
     }
   }
 
-  await doc.save();
+  try {
+    await doc.save();
+  } catch (e) {
+    if (e?.code === 11000) return res.status(400).json({ detail: "Another service already uses this name" });
+    throw e;
+  }
   res.json(doc.toPublic(apiBaseUrl(req)));
 });
 

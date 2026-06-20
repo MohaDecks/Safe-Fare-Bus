@@ -52,21 +52,12 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadAppServices();
   }
 
-  bool _isParkingService(Map<String, dynamic> s) {
-    final name = (s['name'] ?? '').toString().toLowerCase();
-    final slug = (s['slug'] ?? '').toString().toLowerCase();
-    return name.contains('parking') || slug.contains('parking');
-  }
-
   Future<void> _loadAppServices() async {
     try {
       final list = await widget.api.getList('/mobile/app-services', auth: false);
       if (!mounted) return;
       setState(() {
-        _appServices = list
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .where((s) => !_isParkingService(s))
-            .toList();
+        _appServices = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _loadingServices = false;
       });
     } catch (_) {
