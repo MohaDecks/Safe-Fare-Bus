@@ -1,4 +1,4 @@
-package com.example.safefare_mobile
+package com.dirshay.app
 
 import io.flutter.embedding.android.FlutterActivity
 

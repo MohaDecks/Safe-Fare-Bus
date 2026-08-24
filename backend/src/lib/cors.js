@@ -26,6 +26,7 @@ function buildCorsOptions() {
     "http://dirshay.com",
     "https://dirshay.com",
     "http://www.dirshay.com",
+    "https://www.dirshay.com",
     "http://2.58.82.168:4000",
     "http://localhost:3000",
     "http://127.0.0.1:3000",

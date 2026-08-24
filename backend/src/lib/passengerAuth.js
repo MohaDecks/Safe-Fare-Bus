@@ -9,6 +9,24 @@ const { signToken } = require("../middleware/auth");
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 
+/** Fixed OTP for Play Store / demo phones (comma-separated in REVIEWER_PHONES). */
+const REVIEWER_OTP = (process.env.REVIEWER_OTP || "123456").trim();
+
+function reviewerPhones() {
+  const raw = process.env.REVIEWER_PHONES || "image.png";
+  return raw
+    .split(",")
+    .map((p) => {
+      const v = validatePhone(p.trim());
+      return v.ok ? v.storage : null;
+    })
+    .filter(Boolean);
+}
+
+function isReviewerPhone(digits) {
+  return reviewerPhones().includes(digits);
+}
+
 async function defaultCompanyId() {
   const c = await Company.findOne().sort({ createdAt: 1 });
   return c?._id || null;
@@ -57,7 +75,7 @@ async function sendPassengerOtp({ phone }) {
 
   const existing = await findPassengerByPhone(digits, companyId);
 
-  const code = generateOtp();
+  const code = isReviewerPhone(digits) ? REVIEWER_OTP : generateOtp();
   const expires_at = new Date(Date.now() + OTP_TTL_MS);
 
   await OtpCode.updateMany({ phone: digits, company_id: companyId, used: false }, { used: true });
@@ -97,18 +115,23 @@ async function verifyPassengerOtp({ phone, otp }) {
   const companyId = await defaultCompanyId();
   if (!companyId) return { ok: false, detail: "No bus company configured" };
 
-  const row = await OtpCode.findOne({
-    phone: digits,
-    company_id: companyId,
-    code,
-    used: false,
-    expires_at: { $gt: new Date() },
-  }).sort({ createdAt: -1 });
+  const reviewerBypass = isReviewerPhone(digits) && code === REVIEWER_OTP;
 
-  if (!row) return { ok: false, detail: "Invalid or expired OTP" };
+  let otpRow = null;
+  if (!reviewerBypass) {
+    otpRow = await OtpCode.findOne({
+      phone: digits,
+      company_id: companyId,
+      code,
+      used: false,
+      expires_at: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
 
-  row.used = true;
-  await row.save();
+    if (!otpRow) return { ok: false, detail: "Invalid or expired OTP" };
+
+    otpRow.used = true;
+    await otpRow.save();
+  }
 
   let user = await findPassengerByPhone(digits, companyId);
   let isNew = false;
@@ -117,23 +140,25 @@ async function verifyPassengerOtp({ phone, otp }) {
     isNew = true;
     const email = passengerEmail(digits);
     user = await User.create({
-      name: "New customer",
+      name: reviewerBypass ? "Google Reviewer" : "New customer",
       email,
       phone: digits,
       password_hash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10),
       role: "passenger",
       company_id: companyId,
       active: true,
-      profile_complete: false,
+      profile_complete: reviewerBypass,
     });
-    await Wallet.create({ user_id: user._id, balance_birr: 0 });
+    await Wallet.create({ user_id: user._id, balance_birr: reviewerBypass ? 500 : 0 });
   }
 
   const { linkPassengerToCorporate } = require("./corporateLink");
   user = await linkPassengerToCorporate(user);
 
-  row.user_id = user._id;
-  await row.save();
+  if (otpRow) {
+    otpRow.user_id = user._id;
+    await otpRow.save();
+  }
 
   const wallet = await Wallet.findOne({ user_id: user._id });
   const needsRegistration = user.profile_complete === false;

@@ -6,7 +6,7 @@ cd "$(dirname "$0")/mobile"
 
 DOMAIN="${DOMAIN:-dirshay.com}"
 PORT="${PORT:-4000}"
-# nginx (dirshay.com/admin/) → no port. Direct backend :4000 → USE_PORT=true
+# nginx (https://dirshay.com) → no port. Direct backend :4000 → USE_PORT=true
 USE_PORT="${USE_PORT:-false}"
 USER_API_BASE="${API_BASE:-}"
 
@@ -15,7 +15,7 @@ if [ -n "$USER_API_BASE" ]; then
 elif [ "$USE_PORT" = "true" ]; then
   API_URL="http://${DOMAIN}:${PORT}"
 else
-  API_URL="http://${DOMAIN}"
+  API_URL="https://${DOMAIN}"
 fi
 
 BUILD_KIND="${1:-apk}"
@@ -28,7 +28,7 @@ COMMON_FLAGS=(--release --tree-shake-icons)
 if [ -n "$USER_API_BASE" ] || [ "$USE_PORT" = "true" ]; then
   COMMON_FLAGS+=(--dart-define=API_BASE="$API_URL")
 else
-  echo "Using ApiConfig.productionBase ($API_URL) — same as http://dirshay.com/admin/"
+  echo "Using ApiConfig.productionBase ($API_URL) — same as https://dirshay.com/admin/"
 fi
 
 if [ "$BUILD_KIND" = "apk" ]; then

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 /// Customer app API — staff portal is separate (browser /admin/).
 class ApiConfig {
   /// Production server (release APK / App Store)
-  static const String productionBase = 'http://dirshay.com';
+  static const String productionBase = 'https://dirshay.com';
 
   /// Override at build time: --dart-define=API_BASE=http://...
   static const String _envOverride = String.fromEnvironment('API_BASE', defaultValue: '');
@@ -14,14 +14,14 @@ class ApiConfig {
     return _localDevBase;
   }
 
-  /// Debug / flutter run — local backend
+  /// Debug / flutter run — local backend (PORT=4040; 4000 is used by another app)
   static String get _localDevBase {
-    if (kIsWeb) return 'http://127.0.0.1:4000';
+    if (kIsWeb) return 'http://127.0.0.1:4040';
     // Android emulator → host machine; iOS sim / desktop → localhost
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:4000';
+      return 'http://10.0.2.2:4040';
     }
-    return 'http://127.0.0.1:4000';
+    return 'http://127.0.0.1:4040';
   }
 
   static String get api => '$baseUrl/api';

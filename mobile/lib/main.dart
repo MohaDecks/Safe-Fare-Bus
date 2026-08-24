@@ -69,10 +69,14 @@ class _SplashGateState extends State<SplashGate> {
 
   Future<void> _showLogoSplash() async {
     if (!mounted) return;
-    await precacheLocalBrandLogo(context);
+    try {
+      await precacheLocalBrandLogo(context);
+    } catch (_) {}
     if (!mounted) return;
-    FlutterNativeSplash.remove();
-    setState(() => _logoReady = true);
+    try {
+      FlutterNativeSplash.remove();
+    } catch (_) {}
+    if (mounted) setState(() => _logoReady = true);
   }
 
   Future<void> _boot() async {

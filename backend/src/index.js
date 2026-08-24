@@ -6,6 +6,7 @@ const { corsMiddleware } = require("./lib/cors");
 const { buildApiCatalog, renderApiDocsHtml } = require("./lib/apiCatalog");
 
 const adminPortalPath = path.join(__dirname, "../../admin-portal");
+const publicPath = path.join(__dirname, "../../public");
 
 const authRoutes = require("./routes/auth");
 const adminRoutes = require("./routes/admin");
@@ -41,6 +42,10 @@ app.use("/uploads", express.static(pathUploads, { redirect: false }));
 
 app.get("/", (_req, res) => {
   res.redirect("/admin/");
+});
+
+app.get("/privacy", (_req, res) => {
+  res.sendFile(path.join(publicPath, "privacy.html"));
 });
 
 app.get("/api", (_req, res) => {

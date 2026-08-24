@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -7,3 +9,9 @@ Widget buildServiceWebFrame({
 }) {
   return WebViewWidget(controller: controller);
 }
+
+StreamSubscription? listenServiceWebMessages(void Function(String payload) onPayload) {
+  return null;
+}
+
+void downloadDataUrlOnWeb(String dataUrl, String filename) {}

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Dirsha brand design system — red & white fintech theme.
 abstract final class AppColors {
@@ -44,7 +43,7 @@ abstract final class AppShadows {
 class AppTheme {
   static ThemeData light() {
     final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
-    final textTheme = GoogleFonts.interTextTheme(base.textTheme).apply(
+    final textTheme = base.textTheme.apply(
       bodyColor: AppColors.text,
       displayColor: AppColors.text,
     );

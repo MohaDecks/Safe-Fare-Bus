@@ -4,6 +4,8 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
+  gal
+  share_plus
   url_launcher_windows
 )
 
