@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "upload:media": "node scripts/upload-dirshay-media.js"
+    "upload:media": "node scripts/upload-dirshay-media.js",
+    "migrate:icons": "node scripts/migrate-icons-to-cloudinary.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -35,7 +35,9 @@ async function saveProviderLogo(logoBase64, slug) {
     try {
       const url = await uploadBuffer(buf, { publicId: `dirshay/providers/${safe}`, mime });
       if (url) return url;
-    } catch (_) {}
+    } catch (err) {
+      console.error("Cloudinary provider upload failed:", err.message);
+    }
   }
 
   const ext = mime === "image/jpeg" || mime === "image/jpg" ? "jpg" : mime.split("/")[1].replace("jpeg", "jpg");
@@ -55,9 +57,11 @@ function deleteProviderLogo(logoPath) {
 }
 
 function apiBaseUrl(req) {
-  const host = req.get("host");
-  const proto = req.protocol || "http";
-  return `${proto}://${host}`;
+  const fromEnv = String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  const host = req?.get?.("host");
+  const proto = req?.get?.("x-forwarded-proto") || req?.protocol || "http";
+  return host ? `${proto}://${host}` : "";
 }
 
 module.exports = { saveProviderLogo, deleteProviderLogo, apiBaseUrl, UPLOAD_DIR };

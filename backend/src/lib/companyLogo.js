@@ -62,8 +62,10 @@ function deleteCompanyLogo(logoPath) {
 function logoUrl(logoPath, req) {
   if (!logoPath) return "";
   if (logoPath.startsWith("http")) return logoPath;
+  const fromEnv = String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
+  if (fromEnv) return `${fromEnv}${logoPath}`;
   const host = req?.get?.("host");
-  const proto = req?.protocol || "http";
+  const proto = req?.get?.("x-forwarded-proto") || req?.protocol || "http";
   return host ? `${proto}://${host}${logoPath}` : logoPath;
 }
 
