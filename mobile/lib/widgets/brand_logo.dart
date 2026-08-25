@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../services/hub_media.dart';
 import '../theme/app_theme.dart';
 
-/// Dirsha logo with text (`img/last.png` → assets).
+/// Dirsha logo with text (`img/last.png` → assets). Used if Cloudinary is offline.
 const kBrandLogoAsset = 'assets/images/dirsha_logo.png';
 
-/// Circular logo — image fills the circle (one red color, white DIRSHA text visible).
+/// Circular logo — Cloudinary first, then local asset.
 class CircularBrandLogo extends StatelessWidget {
   final double size;
 
@@ -12,18 +13,31 @@ class CircularBrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final url = HubMedia.logoUrl;
     return ClipOval(
       child: SizedBox(
         width: size,
         height: size,
-        child: Image.asset(
-          kBrandLogoAsset,
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-          gaplessPlayback: true,
-          errorBuilder: (_, __, ___) => _fallback(size),
-        ),
+        child: url.isNotEmpty
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => _assetLogo(),
+              )
+            : _assetLogo(),
       ),
+    );
+  }
+
+  Widget _assetLogo() {
+    return Image.asset(
+      kBrandLogoAsset,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) => _fallback(size),
     );
   }
 
@@ -62,7 +76,15 @@ class LocalBrandLogo extends StatelessWidget {
   }
 }
 
-/// Preload logo asset during splash.
-Future<void> precacheLocalBrandLogo(BuildContext context) {
-  return precacheImage(const AssetImage(kBrandLogoAsset), context);
+/// Preload logo (Cloudinary or local) during splash.
+Future<void> precacheLocalBrandLogo(BuildContext context) async {
+  final url = HubMedia.logoUrl;
+  if (url.isNotEmpty) {
+    try {
+      await precacheImage(NetworkImage(url), context);
+      return;
+    } catch (_) {}
+  }
+  if (!context.mounted) return;
+  await precacheImage(const AssetImage(kBrandLogoAsset), context);
 }

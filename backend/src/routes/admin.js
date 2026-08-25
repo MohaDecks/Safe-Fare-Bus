@@ -162,7 +162,7 @@ router.patch("/company/logo", requirePermission("dashboard.view"), async (req, r
 
   let next;
   try {
-    next = saveCompanyLogo(logo_base64, company._id);
+    next = await saveCompanyLogo(logo_base64, company._id);
   } catch (e) {
     return res.status(400).json({ detail: e.message || "Invalid logo image" });
   }

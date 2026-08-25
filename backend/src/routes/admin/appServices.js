@@ -40,7 +40,7 @@ router.post("/", requirePermission("appservices.add"), async (req, res) => {
 
   let icon_path = "";
   try {
-    if (icon_base64) icon_path = saveProviderLogo(icon_base64, `svc-${slug}`) || "";
+    if (icon_base64) icon_path = (await saveProviderLogo(icon_base64, `svc-${slug}`)) || "";
   } catch (e) {
     return res.status(400).json({ detail: e.message });
   }
@@ -85,7 +85,7 @@ router.patch("/:id", requirePermission("appservices.update"), async (req, res) =
 
   if (icon_base64) {
     try {
-      const next = saveProviderLogo(icon_base64, `svc-${doc.slug}`);
+      const next = await saveProviderLogo(icon_base64, `svc-${doc.slug}`);
       if (next) {
         deleteProviderLogo(doc.icon_path);
         doc.icon_path = next;

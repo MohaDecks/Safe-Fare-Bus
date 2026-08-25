@@ -5,13 +5,15 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'webview_platform_init.dart' if (dart.library.html) 'webview_platform_init_web.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/passenger/passenger_shell.dart';
+import 'screens/public_marketplace_screen.dart';
+import 'screens/passenger/bus_booking_shell.dart';
 import 'screens/cashier/cashier_shell.dart';
 import 'config/api_config.dart';
 import 'services/api_service.dart';
 import 'models/user.dart';
 import 'theme/app_theme.dart';
 import 'widgets/brand_logo.dart';
+import 'services/hub_media.dart';
 
 void main() {
   runZonedGuarded(() {
@@ -59,6 +61,8 @@ class _SplashGateState extends State<SplashGate> {
   AppUser? _user;
   bool _needsRegistration = false;
   String? _bootMessage;
+  bool _showLogin = false;
+  bool _enteredBus = false;
 
   @override
   void initState() {
@@ -89,6 +93,8 @@ class _SplashGateState extends State<SplashGate> {
   Future<void> _runBoot() async {
     try {
       await _api.ping().timeout(const Duration(seconds: 8));
+      await HubMedia.load(_api);
+      if (mounted) setState(() {});
       final token = await _api.getToken();
       if (token != null) {
         final me = await _api.getJson('/auth/me').timeout(const Duration(seconds: 10));
@@ -123,6 +129,8 @@ class _SplashGateState extends State<SplashGate> {
       _user = user;
       _needsRegistration = needsRegistration;
       _bootMessage = null;
+      _showLogin = false;
+      _enteredBus = true;
     });
   }
 
@@ -131,6 +139,8 @@ class _SplashGateState extends State<SplashGate> {
       _user = user;
       _needsRegistration = false;
       _bootMessage = null;
+      _showLogin = false;
+      _enteredBus = false;
     });
   }
 
@@ -147,6 +157,8 @@ class _SplashGateState extends State<SplashGate> {
       setState(() {
         _user = null;
         _needsRegistration = false;
+        _showLogin = false;
+        _enteredBus = false;
       });
     }
   }
@@ -168,20 +180,40 @@ class _SplashGateState extends State<SplashGate> {
         ),
       );
     }
-    if (_user == null) {
+    if (_user == null && _showLogin) {
       return LoginScreen(
         api: _api,
         onVerified: _onVerified,
         onCashierVerified: _onCashierVerified,
         bootMessage: _bootMessage,
+        onBack: () => setState(() => _showLogin = false),
       );
     }
     if (_needsRegistration) {
       return RegisterScreen(api: _api, onComplete: _onRegistrationDone);
     }
-    if (_user!.isCashier) {
+    if (_user != null && _user!.isCashier) {
       return CashierShell(user: _user!, api: _api, onLogout: _onLogout);
     }
-    return PassengerShell(user: _user!, api: _api, onLogout: _onLogout);
+    if (_enteredBus && _user != null) {
+      return BusBookingShell(
+        user: _user!,
+        api: _api,
+        onLogout: _onLogout,
+        showBack: true,
+        onClose: () => setState(() => _enteredBus = false),
+      );
+    }
+    return PublicMarketplaceScreen(
+      api: _api,
+      onBusBooking: () {
+        if (_user != null) {
+          setState(() => _enteredBus = true);
+        } else {
+          setState(() => _showLogin = true);
+        }
+      },
+      onOpenLogin: () => setState(() => _showLogin = true),
+    );
   }
 }

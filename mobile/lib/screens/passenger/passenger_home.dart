@@ -11,6 +11,7 @@ class PassengerHome extends StatefulWidget {
   final ApiService api;
   final VoidCallback onLogout;
   final void Function(int tabIndex)? onNavigate;
+  final VoidCallback? onBack;
 
   const PassengerHome({
     super.key,
@@ -18,6 +19,7 @@ class PassengerHome extends StatefulWidget {
     required this.api,
     required this.onLogout,
     this.onNavigate,
+    this.onBack,
   });
 
   @override
@@ -79,12 +81,18 @@ class PassengerHomeState extends State<PassengerHome> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: widget.onBack == null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: widget.onBack,
+              ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Hi, $firstName', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            Text('Bus Booking', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             Text(
-              'Dirsha Wallet',
+              'Hi, $firstName',
               style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
             ),
           ],

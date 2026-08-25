@@ -79,13 +79,15 @@ app.get("/api/docs", (_req, res) => {
 app.get("/api/branding", async (_req, res) => {
   const Company = require("./models/Company");
   const { logoUrl } = require("./lib/companyLogo");
+  const { mediaPayload } = require("./lib/hubMedia");
   const company = await Company.findOne().sort({ createdAt: 1 });
+  const cloudLogo = mediaPayload().logo_url;
   if (!company) {
-    return res.json({ name: "Dirshay Bus", logo_url: "" });
+    return res.json({ name: "Dirshay Bus", logo_url: cloudLogo });
   }
   res.json({
     name: company.name || "Dirshay Bus",
-    logo_url: logoUrl(company.logo_path || "", _req),
+    logo_url: logoUrl(company.logo_path || "", _req) || cloudLogo,
   });
 });
 

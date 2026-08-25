@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../config/api_config.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/phone_input.dart';
 import '../widgets/brand_logo.dart';
-import '../widgets/service_hover_tile.dart';
-import 'service_webview_screen.dart';
 
 enum LoginMode { passenger, cashier }
 
@@ -16,6 +13,7 @@ class LoginScreen extends StatefulWidget {
   final void Function(AppUser user, {required bool needsRegistration}) onVerified;
   final void Function(AppUser user) onCashierVerified;
   final String? bootMessage;
+  final VoidCallback? onBack;
 
   const LoginScreen({
     super.key,
@@ -23,6 +21,7 @@ class LoginScreen extends StatefulWidget {
     required this.onVerified,
     required this.onCashierVerified,
     this.bootMessage,
+    this.onBack,
   });
 
   @override
@@ -41,47 +40,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _otpSent = false;
   String? _phoneDisplay;
   final _otpFocus = FocusNode();
-  List<Map<String, dynamic>> _appServices = [];
-  bool _loadingServices = true;
 
   @override
   void initState() {
     super.initState();
     _otp.addListener(_onOtpChanged);
     _otpFocus.addListener(_onOtpChanged);
-    _loadAppServices();
-  }
-
-  Future<void> _loadAppServices() async {
-    try {
-      final list = await widget.api.getList('/mobile/app-services', auth: false);
-      if (!mounted) return;
-      setState(() {
-        _appServices = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _loadingServices = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadingServices = false);
-    }
-  }
-
-  String _serviceIconUrl(Map<String, dynamic> s) {
-    final url = s['icon_url']?.toString() ?? '';
-    if (url.isEmpty) return '';
-    if (url.startsWith('http')) return url;
-    return '${ApiConfig.baseUrl}$url';
-  }
-
-  void _openServiceLink(Map<String, dynamic> service) {
-    final raw = service['link_url']?.toString() ?? '';
-    if (raw.isEmpty) return;
-    final name = service['name']?.toString() ?? 'Service';
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ServiceWebViewScreen(title: name, url: raw),
-      ),
-    );
   }
 
   @override
@@ -303,192 +267,165 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: widget.onBack == null
+          ? null
+          : AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: widget.onBack,
+              ),
+              title: const Text('Bus Booking'),
+            ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(child: LocalBrandLogo(size: 80)),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Welcome to Dirsha',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isPassenger
-                        ? 'Sign in with your phone number'
-                        : 'Staff cashier sign in',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 28),
-                  SegmentedButton<LoginMode>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(
-                        value: LoginMode.passenger,
-                        label: Text('Passenger'),
-                        icon: Icon(Icons.person_outline, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: LoginMode.cashier,
-                        label: Text('Cashier'),
-                        icon: Icon(Icons.badge_outlined, size: 18),
-                      ),
-                    ],
-                    selected: {_mode},
-                    onSelectionChanged: (s) => _onModeChange(s.first),
-                  ),
-                  if (widget.bootMessage != null) ...[
-                    const SizedBox(height: 16),
-                    _errorBanner(widget.bootMessage!),
-                  ],
-                  const SizedBox(height: 24),
-                  if (isPassenger) ...[
-                    if (!_otpSent) ...[
-                      TextField(
-                        controller: _phone,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: PhoneInput.formatters,
-                        maxLength: 10,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone number',
-                          hintText: '0912345678',
-                          helperText: '10 digits, starts with 0',
-                          prefixIcon: Icon(Icons.phone_outlined),
-                          counterText: '',
-                        ),
-                      ),
-                    ] else ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadii.md),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppRadii.sm),
-                              ),
-                              child: const Icon(Icons.phone_android, color: AppColors.primary),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Welcome to Dirsha',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.text,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _phoneDisplay ?? _phone.text,
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  Text(
-                                    _phoneExists == true
-                                        ? 'Account found — enter OTP'
-                                        : 'New number — verify then register',
-                                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            TextButton(onPressed: _loading ? null : _resetPhone, child: const Text('Change')),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildOtpInput(),
-                    ],
-                  ] else if (isCashier) ...[
-                    TextField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _password,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline),
-                      ),
-                      onSubmitted: (_) => _loading ? null : _cashierLogin(),
-                    ),
-                  ],
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    _errorBanner(_error!),
-                  ],
-                  const SizedBox(height: 28),
-                  FilledButton(
-                    onPressed: _loading
-                        ? null
-                        : (isPassenger
-                            ? (_otpSent ? _verifyOtp : _checkPhoneAndSendOtp)
-                            : _cashierLogin),
-                    child: _loading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : Text(
-                            isPassenger
-                                ? (_otpSent ? 'Verify & continue' : 'Send OTP')
-                                : 'Sign in',
                           ),
-                  ),
-                  if (_loadingServices || _appServices.isNotEmpty) ...[
-                    const SizedBox(height: 36),
-                    Text(
-                      'More services',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    if (_loadingServices)
-                      const Center(
-                        child: SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                        ),
-                      )
-                    else
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: _appServices.map((s) {
-                          final iconUrl = _serviceIconUrl(s);
-                          final name = s['name']?.toString() ?? 'Service';
-                          return ServiceHoverTile(
-                            name: name,
-                            iconUrl: iconUrl,
-                            onTap: () => _openServiceLink(s),
-                          );
-                        }).toList(),
-                      ),
-                  ],
+                          const SizedBox(height: 4),
+                          Text(
+                            isPassenger ? 'Sign in with your phone number' : 'Staff cashier sign in',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+                          ),
+                          const SizedBox(height: 16),
+                          SegmentedButton<LoginMode>(
+                            showSelectedIcon: false,
+                            segments: const [
+                              ButtonSegment(
+                                value: LoginMode.passenger,
+                                label: Text('Passenger'),
+                                icon: Icon(Icons.person_outline, size: 18),
+                              ),
+                              ButtonSegment(
+                                value: LoginMode.cashier,
+                                label: Text('Cashier'),
+                                icon: Icon(Icons.badge_outlined, size: 18),
+                              ),
+                            ],
+                            selected: {_mode},
+                            onSelectionChanged: (s) => _onModeChange(s.first),
+                          ),
+                          if (widget.bootMessage != null) ...[
+                            const SizedBox(height: 16),
+                            _errorBanner(widget.bootMessage!),
+                          ],
+                          const SizedBox(height: 16),
+                          if (isPassenger) ...[
+                            if (!_otpSent) ...[
+                              TextField(
+                                controller: _phone,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: PhoneInput.formatters,
+                                maxLength: 10,
+                                decoration: const InputDecoration(
+                                  labelText: 'Phone number',
+                                  hintText: '0912345678',
+                                  helperText: '10 digits, starts with 0',
+                                  prefixIcon: Icon(Icons.phone_outlined),
+                                  counterText: '',
+                                ),
+                              ),
+                            ] else ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppRadii.md),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                                      ),
+                                      child: const Icon(Icons.phone_android, color: AppColors.primary),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _phoneDisplay ?? _phone.text,
+                                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                          ),
+                                          Text(
+                                            _phoneExists == true
+                                                ? 'Account found — enter OTP'
+                                                : 'New number — verify then register',
+                                            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    TextButton(onPressed: _loading ? null : _resetPhone, child: const Text('Change')),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildOtpInput(),
+                            ],
+                          ] else if (isCashier) ...[
+                            TextField(
+                              controller: _email,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                prefixIcon: Icon(Icons.email_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: _password,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Password',
+                                prefixIcon: Icon(Icons.lock_outline),
+                              ),
+                              onSubmitted: (_) => _loading ? null : _cashierLogin(),
+                            ),
+                          ],
+                          if (_error != null) ...[
+                            const SizedBox(height: 16),
+                            _errorBanner(_error!),
+                          ],
+                          const SizedBox(height: 20),
+                          FilledButton(
+                            onPressed: _loading
+                                ? null
+                                : (isPassenger
+                                    ? (_otpSent ? _verifyOtp : _checkPhoneAndSendOtp)
+                                    : _cashierLogin),
+                            child: _loading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Text(
+                                    isPassenger
+                                        ? (_otpSent ? 'Verify & continue' : 'Send OTP')
+                                        : 'Sign in',
+                                  ),
+                          ),
                 ],
               ),
             ),

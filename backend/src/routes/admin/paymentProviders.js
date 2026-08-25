@@ -31,7 +31,7 @@ router.post("/", requirePermission("topup.add"), async (req, res) => {
 
   let logo_path = "";
   try {
-    if (logo_base64) logo_path = saveProviderLogo(logo_base64, slug) || "";
+    if (logo_base64) logo_path = (await saveProviderLogo(logo_base64, slug)) || "";
   } catch (e) {
     return res.status(400).json({ detail: e.message });
   }
@@ -62,7 +62,7 @@ router.patch("/:id", requirePermission("topup.update"), async (req, res) => {
 
   if (logo_base64) {
     try {
-      const next = saveProviderLogo(logo_base64, doc.slug);
+      const next = await saveProviderLogo(logo_base64, doc.slug);
       if (next) {
         deleteProviderLogo(doc.logo_path);
         doc.logo_path = next;
