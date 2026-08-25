@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/hub_media.dart';
 import '../theme/app_theme.dart';
-import 'brand_logo.dart';
 
 class HubItem {
   final String id;
@@ -13,6 +12,7 @@ class HubItem {
   final String? url;
   final String? imageAsset;
   final String? imageUrl;
+  final String placement;
 
   const HubItem({
     required this.id,
@@ -24,6 +24,7 @@ class HubItem {
     this.url,
     this.imageAsset,
     this.imageUrl,
+    this.placement = 'service',
   });
 
   HubItem withImageUrl(String? image) {
@@ -38,20 +39,23 @@ class HubItem {
       url: url,
       imageAsset: imageAsset,
       imageUrl: image,
+      placement: placement,
     );
   }
 }
 
+const kHubBus = HubItem(
+  id: 'bus',
+  title: 'Bus Booking',
+  subtitle: 'Pay fare & tickets',
+  icon: Icons.directions_bus_rounded,
+  color: AppColors.primary,
+  featured: true,
+  imageAsset: 'assets/images/services/bus.png',
+);
+
 const kHubCatalog = <HubItem>[
-  HubItem(
-    id: 'bus',
-    title: 'Bus Booking',
-    subtitle: 'Pay fare & tickets',
-    icon: Icons.directions_bus_rounded,
-    color: AppColors.primary,
-    featured: true,
-    imageAsset: 'assets/images/services/bus.png',
-  ),
+  kHubBus,
   HubItem(
     id: 'parking',
     title: 'Parking',
@@ -178,11 +182,12 @@ List<HubItem> hubItemsFromLinked(List<Map<String, dynamic>> linked) {
     return HubItem(
       id: 'link-${s['id'] ?? name}',
       title: name,
-      subtitle: 'Open in Dirsha',
+      subtitle: s['placement']?.toString() == 'mini_app' ? 'Mini app' : 'Open in Dirsha',
       icon: Icons.grid_view_rounded,
       color: AppColors.primary,
       url: url.isEmpty ? null : url,
       imageUrl: iconUrl.isEmpty ? null : iconUrl,
+      placement: s['placement']?.toString() == 'mini_app' ? 'mini_app' : 'service',
     );
   }).toList();
 }
@@ -289,62 +294,108 @@ class HubSearchRow extends StatelessWidget {
 
 class HubHeroBanner extends StatelessWidget {
   final VoidCallback onExplore;
+  final String? imageUrl;
 
-  const HubHeroBanner({super.key, required this.onExplore});
+  const HubHeroBanner({super.key, required this.onExplore, this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1F2937), Color(0xFF111827)],
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: SizedBox(
+        height: 168,
+        child: Row(
           children: [
-            Row(
-              children: [
-                const CircularBrandLogo(size: 44),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Everything you need, in one place.',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+            Expanded(
+              flex: 5,
+              child: ColoredBox(
+                color: AppColors.primary,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 10, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Everything you need, all in one place.',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Cars, rentals, tickets, shopping and more — Dirsha has you covered.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              height: 1.3,
+                              fontSize: 11,
+                            ),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: onExplore,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.primary,
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
                         ),
+                        child: const Text('Explore All Services'),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Cars, Parts, Rentals, Tickets, Shopping & More — Dirshay has you covered.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onExplore,
-              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: const Text('Explore All Services'),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                minimumSize: const Size(0, 44),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
+            ),
+            Expanded(
+              flex: 4,
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, __, ___) => const _HeroFallbackArt(),
+                    )
+                  : const _HeroFallbackArt(),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HeroFallbackArt extends StatelessWidget {
+  const _HeroFallbackArt();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFFEE2E2),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned(
+            right: -8,
+            bottom: -12,
+            child: Icon(Icons.directions_bus_rounded, size: 88, color: AppColors.primary.withValues(alpha: 0.35)),
+          ),
+          const Positioned(
+            left: 12,
+            top: 16,
+            child: Icon(Icons.home_work_rounded, size: 36, color: Color(0xFF0D9488)),
+          ),
+          const Positioned(
+            right: 16,
+            top: 20,
+            child: Icon(Icons.directions_car_rounded, size: 32, color: Color(0xFFDC2626)),
+          ),
+        ],
       ),
     );
   }
@@ -369,10 +420,10 @@ class HubServiceTile extends StatelessWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: SizedBox(
-        width: 56,
-        height: 56,
+        width: 32,
+        height: 32,
         child: item.imageUrl != null && item.imageUrl!.isNotEmpty
             ? Image.network(
                 item.imageUrl!,
@@ -387,7 +438,7 @@ class HubServiceTile extends StatelessWidget {
   Widget _iconFallback() {
     return ColoredBox(
       color: item.color.withValues(alpha: 0.12),
-      child: Icon(item.icon, color: item.color, size: 28),
+      child: Icon(item.icon, color: item.color, size: 18),
     );
   }
 
@@ -395,21 +446,20 @@ class HubServiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: item.featured ? AppColors.primary : AppColors.border,
-              width: item.featured ? 1.6 : 1,
+              width: item.featured ? 1.4 : 1,
             ),
-            boxShadow: AppShadows.card,
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -418,30 +468,29 @@ class HubServiceTile extends StatelessWidget {
                     _picture(),
                     const Spacer(),
                     Container(
-                      width: 26,
-                      height: 26,
+                      width: 18,
+                      height: 18,
                       decoration: BoxDecoration(
                         color: AppColors.background,
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.border),
                       ),
-                      child: Icon(Icons.arrow_forward_rounded, size: 14, color: item.color),
+                      child: Icon(Icons.arrow_forward_rounded, size: 10, color: item.color),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 4),
                 Text(
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   item.subtitle,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.25),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 9, height: 1.15),
                 ),
               ],
             ),
@@ -466,9 +515,9 @@ class HubServiceGrid extends StatelessWidget {
       itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.15,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1.55,
       ),
       itemBuilder: (context, i) => HubServiceTile(item: items[i], onTap: () => onTap(items[i])),
     );
@@ -511,32 +560,111 @@ class HubSellBanner extends StatelessWidget {
   }
 }
 
+class HubMoreWays extends StatelessWidget {
+  final List<HubItem> items;
+  final void Function(HubItem item) onTap;
+
+  const HubMoreWays({super.key, required this.items, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'More ways Dirsha makes life easier',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, i) {
+              final item = items[i];
+              return InkWell(
+                onTap: () => onTap(item),
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 76,
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 52,
+                          height: 52,
+                          child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                              ? Image.network(item.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _chipIcon(item))
+                              : item.imageAsset != null
+                                  ? Image.asset(item.imageAsset!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _chipIcon(item))
+                                  : _chipIcon(item),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, height: 1.15),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _chipIcon(HubItem item) {
+    return ColoredBox(
+      color: item.color.withValues(alpha: 0.12),
+      child: Icon(item.icon, color: item.color, size: 26),
+    );
+  }
+}
+
 class HubTrustRow extends StatelessWidget {
   const HubTrustRow({super.key});
 
   @override
   Widget build(BuildContext context) {
     const items = [
-      (Icons.verified_user_outlined, 'Verified'),
-      (Icons.lock_outline_rounded, 'Secure'),
-      (Icons.support_agent_rounded, '24/7'),
-      (Icons.bolt_rounded, 'Fast'),
-      (Icons.location_on_outlined, 'Ethiopia'),
+      (Icons.verified_user_outlined, 'Secure & Safe'),
+      (Icons.bolt_rounded, 'Fast & Easy'),
+      (Icons.support_agent_rounded, '24/7 Support'),
+      (Icons.favorite_outline_rounded, 'Trusted Platform'),
     ];
-    return Row(
-      children: items
-          .map(
-            (e) => Expanded(
-              child: Column(
-                children: [
-                  Icon(e.$1, size: 20, color: AppColors.primary),
-                  const SizedBox(height: 4),
-                  Text(e.$2, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        children: items
+            .map(
+              (e) => Expanded(
+                child: Column(
+                  children: [
+                    Icon(e.$1, size: 20, color: Colors.white),
+                    const SizedBox(height: 4),
+                    Text(
+                      e.$2,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          )
-          .toList(),
+            )
+            .toList(),
+      ),
     );
   }
 }

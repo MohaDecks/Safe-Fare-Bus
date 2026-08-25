@@ -11,9 +11,13 @@ async function resolveCompanyId() {
   return company?._id || null;
 }
 
-/** Public Cloudinary URLs for logo + marketplace tiles (no auth, no secrets). */
-router.get("/media", (_req, res) => {
-  res.json(mediaPayload());
+/** Public Cloudinary URLs + marketplace banner (no auth, no secrets). */
+router.get("/media", async (req, res) => {
+  const payload = mediaPayload();
+  const company = await Company.findOne().sort({ createdAt: 1 });
+  const { logoUrl } = require("../lib/companyLogo");
+  payload.banner_url = logoUrl(company?.hub_banner_path || "", req);
+  res.json(payload);
 });
 
 /** Active linked services shown on mobile login (no auth). */

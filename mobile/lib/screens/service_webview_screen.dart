@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../widgets/service_web_iframe_stub.dart'
     if (dart.library.html) '../widgets/service_web_iframe_web.dart';
@@ -27,6 +28,7 @@ class ServiceWebViewScreen extends StatefulWidget {
 
 class _ServiceWebViewScreenState extends State<ServiceWebViewScreen> {
   WebViewController? _controller;
+  final _iframeNav = ServiceIframeNav();
   bool _loading = true;
   String? _error;
   StreamSubscription? _webMessageSub;
@@ -205,15 +207,55 @@ class _ServiceWebViewScreenState extends State<ServiceWebViewScreen> {
     super.dispose();
   }
 
+  Future<void> _onBack() async {
+    if (!kIsWeb && _controller != null) {
+      if (await _controller!.canGoBack()) {
+        await _controller!.goBack();
+        return;
+      }
+    }
+    if (kIsWeb) {
+      final inner = await _iframeNav.goBack();
+      if (inner) return;
+    }
+    _closeToMarketplace();
+  }
+
+  void _closeToMarketplace() {
+    if (!mounted) return;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _onBack();
+      },
+      child: Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: PointerInterceptor(
+          child: AppBar(
+            title: Text(widget.title),
+            automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Back',
+              onPressed: _onBack,
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Close',
+                onPressed: _closeToMarketplace,
+              ),
+            ],
+          ),
         ),
       ),
       body: Stack(
@@ -222,6 +264,7 @@ class _ServiceWebViewScreenState extends State<ServiceWebViewScreen> {
           buildServiceWebFrame(
             controller: _controller ?? WebViewController(),
             url: _uri.toString(),
+            nav: _iframeNav,
           ),
           if (_loading)
             const Align(
@@ -247,6 +290,7 @@ class _ServiceWebViewScreenState extends State<ServiceWebViewScreen> {
             ),
         ],
       ),
+    ),
     );
   }
 }

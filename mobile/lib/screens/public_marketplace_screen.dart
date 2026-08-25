@@ -57,26 +57,29 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     } catch (_) {}
   }
 
-  List<HubItem> get _items {
-    final linked = hubItemsFromLinked(_linked);
-    final hasDynamicParking = linked.any((e) => e.title.toLowerCase().contains('park'));
-    final catalog = hasDynamicParking ? kHubCatalog.where((e) => e.id != 'parking') : kHubCatalog;
-    return filterHubItems(applyHubMedia([...catalog, ...linked]), _search.text);
+  List<HubItem> get _allLinked => hubItemsFromLinked(_linked);
+
+  List<HubItem> get _serviceItems {
+    final linked = _allLinked.where((e) => e.placement != 'mini_app' && e.id != 'bus').toList();
+    final bus = kHubBus.withImageUrl(HubMedia.serviceUrl('bus'));
+    return filterHubItems([bus, ...linked], _search.text);
+  }
+
+  List<HubItem> get _miniItems {
+    return filterHubItems(_allLinked.where((e) => e.placement == 'mini_app').toList(), _search.text);
   }
 
   void _scrollToServices() {
+    setState(() => _tab = 2);
     final ctx = _gridKey.currentContext;
     if (ctx != null) {
       Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400), alignment: 0.05);
     }
   }
 
-  void _comingSoon(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$title is coming soon')));
-  }
-
   void _openItem(HubItem item) {
-    if (item.id == 'bus') {
+    final title = item.title.toLowerCase();
+    if (item.id == 'bus' || (title.contains('bus') && (item.url == null || item.url!.isEmpty))) {
       widget.onBusBooking();
       return;
     }
@@ -86,29 +89,43 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       );
       return;
     }
-    Map<String, dynamic>? parking;
-    for (final s in _linked) {
-      if ((s['name']?.toString() ?? '').toLowerCase().contains('park')) {
-        parking = s;
-        break;
-      }
-    }
-    if (item.id == 'parking' && parking != null) {
-      final raw = parking['link_url']?.toString() ?? '';
-      if (raw.isNotEmpty) {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ServiceWebViewScreen(title: item.title, url: raw)),
-        );
-        return;
-      }
-    }
     showHubComingSoon(context, item);
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800));
+  }
+
+  Widget _serviceGrid(List<HubItem> items) {
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Text('No services yet', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+        ),
+      );
+    }
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 1.85,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, i) => HubServiceTile(item: items[i], onTap: () => _openItem(items[i])),
+          childCount: items.length,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final items = _items;
+    final services = _serviceItems;
+    final mini = _miniItems;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -133,7 +150,11 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
         ),
       ),
       body: SafeArea(
-        child: CustomScrollView(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
@@ -147,107 +168,60 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                     const SizedBox(height: 8),
                     HubSearchRow(controller: _search, onChanged: (_) => setState(() {})),
                     const SizedBox(height: 16),
-                    HubHeroBanner(onExplore: _scrollToServices),
+                    HubHeroBanner(
+                      onExplore: _scrollToServices,
+                      imageUrl: HubMedia.bannerUrl.isEmpty ? null : HubMedia.bannerUrl,
+                    ),
                     const SizedBox(height: 22),
-                    KeyedSubtree(
-                      key: _gridKey,
-                      child: Text(
-                        'Our Services',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tap Bus Booking to sign in and pay fare',
-                      style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 14),
+                    KeyedSubtree(key: _gridKey, child: _sectionTitle('Our Services')),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.15,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => HubServiceTile(item: items[i], onTap: () => _openItem(items[i])),
-                  childCount: items.length,
+            _serviceGrid(services),
+            if (mini.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 22, 16, 14),
+                  child: _sectionTitle('New Mini Apps'),
                 ),
               ),
-            ),
+            if (mini.isNotEmpty) _serviceGrid(mini),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
                 child: Column(
                   children: [
-                    HubSellBanner(onPost: () => _comingSoon('Post / Sell')),
-                    const SizedBox(height: 20),
                     const HubTrustRow(),
                     const SizedBox(height: 16),
-                    _DownloadBar(),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _comingSoon('Post / Sell'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add, size: 30),
-      ),
       bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
         child: SizedBox(
           height: 64,
           child: Row(
             children: [
               _TabBtn(icon: Icons.home_rounded, label: 'Home', selected: _tab == 0, onTap: () => setState(() => _tab = 0)),
-              _TabBtn(icon: Icons.calendar_month_rounded, label: 'Bookings', selected: false, onTap: widget.onBusBooking),
-              const SizedBox(width: 56),
-              _TabBtn(icon: Icons.chat_bubble_outline_rounded, label: 'Messages', selected: _tab == 3, onTap: () => _comingSoon('Messages')),
-              _TabBtn(icon: Icons.person_outline_rounded, label: 'Profile', selected: false, onTap: widget.onOpenLogin ?? widget.onBusBooking),
+              _TabBtn(icon: Icons.calendar_month_rounded, label: 'Bookings', selected: _tab == 1, onTap: widget.onBusBooking),
+              _TabBtn(icon: Icons.grid_view_rounded, label: 'Services', selected: _tab == 2, onTap: _scrollToServices),
+              _TabBtn(icon: Icons.account_balance_wallet_outlined, label: 'Wallet', selected: false, onTap: widget.onBusBooking),
+              _TabBtn(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                selected: false,
+                onTap: widget.onOpenLogin ?? widget.onBusBooking,
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _DownloadBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const CircularBrandLogo(size: 40),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Download Dirshay App',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-            ),
-          ),
-          Text('Play · App Store', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
-        ],
       ),
     );
   }
@@ -279,4 +253,3 @@ class _TabBtn extends StatelessWidget {
     );
   }
 }
-

@@ -41,7 +41,7 @@ function buildApiCatalog(baseUrl) {
       name: "Mobile app",
       prefix: "/api/mobile",
       routes: [
-        { method: "GET", path: "/api/mobile/media", auth: "none", description: "Cloudinary logo + service image URLs" },
+        { method: "GET", path: "/api/mobile/media", auth: "none", description: "Cloudinary logo, banner, and service image URLs" },
         { method: "GET", path: "/api/mobile/app-services", auth: "none", description: "Linked services on login screen" },
       ],
     },

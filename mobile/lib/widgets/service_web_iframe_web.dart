@@ -7,11 +7,33 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:web/web.dart' as web;
 
+class ServiceIframeNav {
+  web.HTMLIFrameElement? _iframe;
+
+  void _attach(web.HTMLIFrameElement iframe) {
+    _iframe = iframe;
+  }
+
+  /// SPA pages (Motora detail → list) do not fire iframe onLoad, so always try
+  /// the iframe's own history first. Never send the user to Dirsha home.
+  Future<bool> goBack() async {
+    final iframe = _iframe;
+    if (iframe == null) return false;
+    try {
+      iframe.contentWindow?.history.back();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
 /// Full-size iframe for Flutter web — avoids webview_flutter_web clipping.
 class ServiceWebIframe extends StatefulWidget {
   final String url;
+  final ServiceIframeNav? nav;
 
-  const ServiceWebIframe({super.key, required this.url});
+  const ServiceWebIframe({super.key, required this.url, this.nav});
 
   @override
   State<ServiceWebIframe> createState() => _ServiceWebIframeState();
@@ -32,6 +54,7 @@ class _ServiceWebIframeState extends State<ServiceWebIframe> {
         ..style.height = '100%'
         ..style.display = 'block'
         ..allowFullscreen = true;
+      widget.nav?._attach(iframe);
       return iframe;
     });
   }
@@ -45,8 +68,9 @@ class _ServiceWebIframeState extends State<ServiceWebIframe> {
 Widget buildServiceWebFrame({
   required WebViewController controller,
   required String url,
+  ServiceIframeNav? nav,
 }) {
-  return ServiceWebIframe(url: url);
+  return ServiceWebIframe(url: url, nav: nav);
 }
 
 StreamSubscription? listenServiceWebMessages(void Function(String payload) onPayload) {

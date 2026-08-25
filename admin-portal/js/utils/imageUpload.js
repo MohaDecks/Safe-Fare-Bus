@@ -40,6 +40,21 @@ function resizeImageFile(file, maxDim = 256, quality = 0.85) {
   });
 }
 
+/** Compress wide marketplace banner (right-side hero image). */
+export async function prepareBannerUpload(file) {
+  if (!file?.type?.startsWith("image/")) {
+    throw new Error("Choose a PNG, JPG, or WebP image");
+  }
+  const LOGO_MAX = 2 * 1024 * 1024;
+  if (file.size <= 400 * 1024) {
+    return readFileAsDataUrl(file);
+  }
+  return resizeImageFile(file, 1400, 0.88).then((out) => {
+    const approxBytes = Math.ceil((out.length - out.indexOf(",") - 1) * 0.75);
+    if (approxBytes > LOGO_MAX) throw new Error("Banner is too large — use a smaller image");
+    return out;
+  });
+}
 /** Compress icon for app-service / provider upload — keeps payload small for server limits. */
 export async function prepareIconUpload(file) {
   if (!file?.type?.startsWith("image/")) {

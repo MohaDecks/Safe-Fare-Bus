@@ -51,6 +51,10 @@ async function saveCompanyLogo(logoBase64, companyId) {
   return `/uploads/company/${name}`;
 }
 
+async function saveHubBanner(bannerBase64) {
+  return saveCompanyLogo(bannerBase64, "hub-banner");
+}
+
 function deleteCompanyLogo(logoPath) {
   if (!logoPath || !logoPath.startsWith("/uploads/company/")) return;
   const file = path.join(__dirname, "../..", logoPath);
@@ -69,4 +73,4 @@ function logoUrl(logoPath, req) {
   return host ? `${proto}://${host}${logoPath}` : logoPath;
 }
 
-module.exports = { saveCompanyLogo, deleteCompanyLogo, logoUrl, UPLOAD_DIR, MAX_BYTES };
+module.exports = { saveCompanyLogo, saveHubBanner, deleteCompanyLogo, logoUrl, UPLOAD_DIR, MAX_BYTES };

@@ -148,6 +148,7 @@ router.get("/company", requirePermission("dashboard.view"), async (req, res) => 
     id: company?._id?.toString(),
     name: company?.name || "",
     logo_url: logoUrl(company?.logo_path || "", req),
+    hub_banner_url: logoUrl(company?.hub_banner_path || "", req),
   });
 });
 
@@ -176,12 +177,13 @@ router.patch("/company/logo", requirePermission("dashboard.view"), async (req, r
     id: company._id.toString(),
     name: company.name,
     logo_url: logoUrl(company.logo_path, req),
+    hub_banner_url: logoUrl(company.hub_banner_path || "", req),
   });
 });
 
 router.delete("/company/logo", requirePermission("dashboard.view"), async (req, res) => {
   const Company = require("../models/Company");
-  const { deleteCompanyLogo } = require("../lib/companyLogo");
+  const { deleteCompanyLogo, logoUrl } = require("../lib/companyLogo");
   const company = await Company.findById(req.user.company_id);
   if (!company) return res.status(404).json({ detail: "Company not found" });
 
@@ -193,6 +195,54 @@ router.delete("/company/logo", requirePermission("dashboard.view"), async (req, 
     id: company._id.toString(),
     name: company.name,
     logo_url: "",
+    hub_banner_url: logoUrl(company.hub_banner_path || "", req),
+  });
+});
+
+router.patch("/company/hub-banner", requirePermission("dashboard.view"), async (req, res) => {
+  const Company = require("../models/Company");
+  const { saveHubBanner, deleteCompanyLogo, logoUrl } = require("../lib/companyLogo");
+  const { banner_base64 } = req.body || {};
+  if (!banner_base64) return res.status(400).json({ detail: "banner_base64 required" });
+
+  const company = await Company.findById(req.user.company_id);
+  if (!company) return res.status(404).json({ detail: "Company not found" });
+
+  let next;
+  try {
+    next = await saveHubBanner(banner_base64);
+  } catch (e) {
+    return res.status(400).json({ detail: e.message || "Invalid banner image" });
+  }
+  if (!next) return res.status(400).json({ detail: "Invalid banner image" });
+
+  deleteCompanyLogo(company.hub_banner_path);
+  company.hub_banner_path = next;
+  await company.save();
+
+  res.json({
+    id: company._id.toString(),
+    name: company.name,
+    logo_url: logoUrl(company.logo_path || "", req),
+    hub_banner_url: logoUrl(company.hub_banner_path, req),
+  });
+});
+
+router.delete("/company/hub-banner", requirePermission("dashboard.view"), async (req, res) => {
+  const Company = require("../models/Company");
+  const { deleteCompanyLogo, logoUrl } = require("../lib/companyLogo");
+  const company = await Company.findById(req.user.company_id);
+  if (!company) return res.status(404).json({ detail: "Company not found" });
+
+  deleteCompanyLogo(company.hub_banner_path);
+  company.hub_banner_path = "";
+  await company.save();
+
+  res.json({
+    id: company._id.toString(),
+    name: company.name,
+    logo_url: logoUrl(company.logo_path || "", req),
+    hub_banner_url: "",
   });
 });
 

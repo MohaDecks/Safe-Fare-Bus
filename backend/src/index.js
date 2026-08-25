@@ -83,11 +83,12 @@ app.get("/api/branding", async (_req, res) => {
   const company = await Company.findOne().sort({ createdAt: 1 });
   const cloudLogo = mediaPayload().logo_url;
   if (!company) {
-    return res.json({ name: "Dirshay Bus", logo_url: cloudLogo });
+    return res.json({ name: "Dirshay Bus", logo_url: cloudLogo, banner_url: "" });
   }
   res.json({
     name: company.name || "Dirshay Bus",
     logo_url: logoUrl(company.logo_path || "", _req) || cloudLogo,
+    banner_url: logoUrl(company.hub_banner_path || "", _req),
   });
 });
 

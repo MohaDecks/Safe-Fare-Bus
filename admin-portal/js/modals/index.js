@@ -189,15 +189,23 @@ export function showPaymentProviderModal(existing, reload) {
 
 export function showAppServiceModal(existing, reload) {
   const isEdit = !!existing?.id;
+  const placement = existing?.placement === "mini_app" ? "mini_app" : "service";
   openModal(
     isEdit ? `Edit — ${existing.name}` : "Add app service",
     `<div class="form-group"><label>Service name</label><input id="m-name" value="${existing?.name || ""}" placeholder="APS / Airport Parking" /></div>
      <div class="form-group"><label>Link URL</label><input id="m-link" value="${existing?.link_url || ""}" placeholder="http://localhost:8082" />
      <small style="color:var(--muted)">Full URL — opens in browser when user taps icon in app</small></div>
+     <div class="form-group"><label>Show on home</label>
+       <select id="m-placement">
+         <option value="service" ${placement === "service" ? "selected" : ""}>Our Services</option>
+         <option value="mini_app" ${placement === "mini_app" ? "selected" : ""}>New Mini Apps</option>
+       </select>
+       <small style="color:var(--muted)">New Mini Apps appear in the section below Our Services</small>
+     </div>
      <div class="form-group"><label>Icon image</label><input id="m-icon" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
      <small style="color:var(--muted)">PNG or JPG, max ~600KB${isEdit ? " — leave empty to keep current" : ""}</small></div>
      <div class="form-group"><label>Sort order</label><input id="m-order" type="number" value="${existing?.sort_order ?? 0}" /></div>
-     <div class="form-group"><label><input type="checkbox" id="m-active" ${existing?.active !== false ? "checked" : ""}/> Show on mobile login</label></div>`,
+     <div class="form-group"><label><input type="checkbox" id="m-active" ${existing?.active !== false ? "checked" : ""}/> Show on mobile home</label></div>`,
     async () => {
       const name = document.getElementById("m-name").value.trim();
       const link_url = document.getElementById("m-link").value.trim();
@@ -206,6 +214,7 @@ export function showAppServiceModal(existing, reload) {
       const body = {
         name,
         link_url,
+        placement: document.getElementById("m-placement").value,
         active: document.getElementById("m-active").checked,
         sort_order: parseInt(document.getElementById("m-order").value, 10) || 0,
       };

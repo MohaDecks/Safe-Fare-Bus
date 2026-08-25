@@ -15,6 +15,10 @@ function slugify(name) {
     .replace(/^-|-$/g, "");
 }
 
+function normalizePlacement(raw) {
+  return String(raw || "").trim() === "mini_app" ? "mini_app" : "service";
+}
+
 function normalizeUrl(raw) {
   const url = String(raw || "").trim();
   if (!url) return "";
@@ -29,7 +33,7 @@ router.get("/", requirePermission("appservices.view"), async (req, res) => {
 });
 
 router.post("/", requirePermission("appservices.add"), async (req, res) => {
-  const { name, link_url, active, sort_order, icon_base64 } = req.body || {};
+  const { name, link_url, active, sort_order, icon_base64, placement } = req.body || {};
   if (!name?.trim()) return res.status(400).json({ detail: "name required" });
   const link = normalizeUrl(link_url);
   if (!link) return res.status(400).json({ detail: "link_url required" });
@@ -51,6 +55,7 @@ router.post("/", requirePermission("appservices.add"), async (req, res) => {
     slug,
     link_url: link,
     icon_path,
+    placement: normalizePlacement(placement),
     active: active !== false,
     sort_order: Number(sort_order) || 0,
   });
@@ -62,7 +67,7 @@ router.patch("/:id", requirePermission("appservices.update"), async (req, res) =
   const doc = await AppService.findOne({ _id: req.params.id, company_id: req.user.company_id });
   if (!doc) return res.status(404).json({ detail: "Not found" });
 
-  const { name, link_url, active, sort_order, icon_base64 } = req.body || {};
+  const { name, link_url, active, sort_order, icon_base64, placement } = req.body || {};
   if (name?.trim()) {
     const newName = name.trim();
     const newSlug = slugify(newName);
@@ -81,6 +86,7 @@ router.patch("/:id", requirePermission("appservices.update"), async (req, res) =
     doc.link_url = link;
   }
   if (active !== undefined) doc.active = !!active;
+  if (placement !== undefined) doc.placement = normalizePlacement(placement);
   if (sort_order !== undefined) doc.sort_order = Number(sort_order) || 0;
 
   if (icon_base64) {
